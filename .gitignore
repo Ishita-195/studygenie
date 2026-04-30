@@ -1,0 +1,34 @@
+# User uploads (large PDF files)
+uploads/
+*.pdf
+
+# Database config with credentials
+config.php
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Test files
+test.py
+test.json
