@@ -1,290 +1,267 @@
-<?php session_start();
-if (!isset($_SESSION["user_name"])) {
-    header("Location: authentication.php");
-}
+<?php
+session_start();
+if (!isset($_SESSION["user_name"])) { header("Location: authentication.php"); exit(); }
+require_once 'config.php';
+
+$id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+if ($id <= 0) { header("Location: dashboard.php"); exit(); }
+
+$stmt = $con->prepare("SELECT file_name, file_path, summary FROM pdf_uploads WHERE id = ?");
+$stmt->bind_param("i", $id); $stmt->execute();
+$result = $stmt->get_result();
+$row = $result->fetch_assoc();
+if (!$row) { header("Location: dashboard.php"); exit(); }
+
+$filename  = basename($row['file_path'] ?? $row['file_name']);
+$doc_name  = $row['file_name'];
+$db_summary = $row['summary'] ?? '';
+
+$safe_name = htmlspecialchars(clean_name($doc_name));
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>StudyGenie AI Analysis</title>
-
+<title>StudyGenie – Summary</title>
+<?php include 'theme.php'; ?>
 <style>
+.page-wrapper { max-width: 900px; margin: auto; }
 
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-    font-family:'Segoe UI',sans-serif;
+.breadcrumb { font-size:13px; color:rgba(255,255,255,.45); margin-bottom:18px; display:flex; align-items:center; gap:8px; }
+.breadcrumb a { color:rgba(255,255,255,.55); } .breadcrumb a:hover { color:#fff; }
+
+/* Summary card */
+.summary-text {
+  font-size: 16px; line-height: 1.85; color: #222;
+  white-space: pre-wrap;
+}
+.cursor { display:inline-block; width:2px; height:1em; background:var(--g2); margin-left:2px; animation:blink .7s step-end infinite; vertical-align:text-bottom; }
+@keyframes blink { 50%{opacity:0} }
+
+/* Meta row */
+.meta-row {
+  display:flex; gap:10px; flex-wrap:wrap; margin-top:18px;
+  padding-top:16px; border-top:1px solid rgba(0,0,0,.06);
+}
+.meta-chip {
+  padding:6px 14px; border-radius:20px;
+  font-size:13px; font-weight:700; display:flex; align-items:center; gap:5px;
+}
+.chip-green  { background:rgba(76,175,80,.12);  color:#2e7d32; }
+.chip-blue   { background:rgba(33,150,243,.1);  color:#1565c0; }
+.chip-purple { background:rgba(156,39,176,.1);  color:#7b1fa2; }
+.chip-amber  { background:rgba(255,193,7,.12);  color:#856404; }
+
+/* Topics */
+.topics-grid { display:flex; flex-wrap:wrap; gap:10px; margin-top:4px; }
+.topic-chip {
+  padding:10px 18px; border-radius:30px; cursor:pointer;
+  font-size:14px; font-weight:600;
+  background:rgba(76,175,80,.08); color:var(--g2);
+  border:1.5px solid rgba(76,175,80,.2);
+  transition:all .2s;
+}
+.topic-chip:hover { background:rgba(76,175,80,.18); transform:translateY(-2px); box-shadow:0 4px 12px rgba(76,175,80,.2); }
+.topic-chip.active { background:linear-gradient(135deg,#2e7d32,#43a047); color:#fff; border-color:transparent; }
+
+/* Topic result */
+.topic-answer {
+  margin-top:18px; padding:22px;
+  background:linear-gradient(135deg,rgba(232,245,233,.95),rgba(241,248,233,.95));
+  border-left:4px solid #4caf50; border-radius:14px;
+  font-size:15px; line-height:1.75; display:none;
+  white-space: pre-wrap;
 }
 
-body{
-    background:#e8f5e9;
-    padding:30px;
-}
+/* Action buttons row */
+.action-row { display:flex; gap:12px; flex-wrap:wrap; margin-top:22px; }
 
-/* HEADER */
-.header{
-    background:#fff;
-    padding:18px 25px;
-    border-radius:18px;
-    box-shadow:0 8px 20px rgba(0,128,0,0.12);
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:25px;
-}
+/* Loading skeleton */
+.skel-line { height:18px; border-radius:8px; margin-bottom:12px; }
 
-.logo{
-    font-size:26px;
-    color:#2e7d32;
-    font-weight:bold;
-}
-.logo span{color:#4caf50}
-
-/* CARD */
-.card{
-    max-width:800px;
-    margin:auto;
-    background:#fff;
-    padding:30px;
-    border-radius:20px;
-    box-shadow:0 10px 25px rgba(0,128,0,0.12);
-    margin-bottom:25px;
-}
-
-.card h2{
-    color:#2e7d32;
-    margin-bottom:15px;
-}
-
-/* SUMMARY */
-.summary{
-    color:#444;
-    line-height:1.6;
-    margin-bottom:20px;
-}
-
-/* META BADGES */
-.meta{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-}
-
-.badge{
-    padding:6px 14px;
-    border-radius:20px;
-    font-size:13px;
-    font-weight:600;
-}
-
-.readtime{
-    background:#f1f8f4;
-    color:#2e7d32;
-}
-
-.easy{background:#d4edda;color:#155724}
-.medium{background:#fff3cd;color:#856404}
-.hard{background:#ffebee;color:#c62828}
-
-/* TOPICS */
-.topics{
-    display:flex;
-    flex-wrap:wrap;
-    gap:12px;
-    margin-top:15px;
-}
-
-.topic{
-    padding:10px 16px;
-    border-radius:20px;
-    background:#f1f8f4;
-    color:#2e7d32;
-    cursor:pointer;
-    transition:.25s;
-    font-weight:500;
-}
-
-.topic:hover{
-    background:#c8e6c9;
-}
-
-/* CLICK RESULT */
-.topic-result{
-    margin-top:20px;
-    padding:15px;
-    background:#f1f8f4;
-    border-radius:12px;
-    display:none;
-}
-
+/* Error */
+.err-msg { padding:16px; background:rgba(244,67,54,.07); border:1px solid rgba(244,67,54,.2); border-radius:12px; color:#c62828; font-size:14px; }
 </style>
 </head>
 <body>
+<div class="page-wrapper">
+  <?php include "navbar.php"; ?>
 
-<div class="header">
-    <?php include "navbar.php"; ?>
-    <div>AI Analysis</div>
-</div>
+  <div class="breadcrumb">
+    <a href="dashboard.php">Dashboard</a> <span style="opacity:.3">›</span>
+    <a href="docdetail.php?id=<?= $id ?>">Document</a> <span style="opacity:.3">›</span>
+    <span>Summary</span>
+  </div>
 
-<!-- SUMMARY -->
-<div class="card">
-    <h2>Document Summary</h2>
-        <?php 
-        include 'config.php';
-        $id = $_GET['id'];
-        $sql = "Select summary from pdf_uploads where id='$id'";
-        $result = $con->query($sql);
-        $row = $result->fetch_assoc();
-        ?>
-
-    <p class="summary" id="summaryText"><?php echo $row['summary']; ?></p>
-
-    <div class="meta">
-        <span class="badge readtime" id="readTime">⏱ Calculating...</span>
-        <span class="badge medium" id="difficultyBadge">Medium Difficulty</span>
-    </div>
-</div>
-
-<!-- KEY TOPICS -->
-<div class="card">
-    <h2>Key Topics</h2>
-
-    <div class="topics" id="topicsContainer">
-        <!-- Topics inserted dynamically -->
+  <!-- Summary Card -->
+  <div class="sg-card" style="margin-bottom:18px;" id="summaryCard">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;">
+      <div style="font-size:28px;">📄</div>
+      <div>
+        <h2 class="section-title" style="margin-bottom:2px;"><?= $safe_name ?></h2>
+        <span class="text-muted" style="font-size:13px;">AI-Generated Summary</span>
+      </div>
     </div>
 
-    <div class="topic-result" id="topicResult"></div>
+    <!-- Skeleton while loading -->
+    <div id="sumSkeleton">
+      <div class="skeleton skel-line" style="width:95%"></div>
+      <div class="skeleton skel-line" style="width:88%"></div>
+      <div class="skeleton skel-line" style="width:92%"></div>
+      <div class="skeleton skel-line" style="width:70%"></div>
+    </div>
 
+    <div id="sumContent" style="display:none;">
+      <div class="summary-text" id="summaryText"></div>
+      <div class="meta-row" id="metaRow"></div>
+    </div>
+
+    <div id="sumError" class="err-msg" style="display:none;"></div>
+  </div>
+
+  <!-- Key Topics Card -->
+  <div class="sg-card" style="margin-bottom:18px;" id="topicsCard">
+    <h2 class="section-title">Key Topics</h2>
+    <p class="text-muted" style="font-size:14px;margin-bottom:16px;">Click any topic to get a focused explanation from the document.</p>
+
+    <div id="topicsSkeleton">
+      <div class="skeleton skel-line" style="width:60%;height:38px;border-radius:30px;"></div>
+    </div>
+
+    <div class="topics-grid" id="topicsGrid" style="display:none;"></div>
+    <div class="topic-answer" id="topicAnswer"></div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="sg-card-flat">
+    <div class="action-row">
+      <a href="qa.php?id=<?= $id ?>" class="sg-btn sg-btn-primary">💬 Ask Questions</a>
+      <a href="quiz.php?id=<?= $id ?>" class="sg-btn sg-btn-ghost">🧪 Take Quiz</a>
+      <a href="docdetail.php?id=<?= $id ?>" class="sg-btn sg-btn-ghost">← Back to Document</a>
+    </div>
+  </div>
 </div>
 
 <script>
+const docFilename = <?= json_encode($filename) ?>;
+const docId       = <?= intval($id) ?>;
+const dbSummary   = <?= json_encode($db_summary) ?>;
 
-/* ============================= */
-/*   GET FILE FROM UPLOAD PAGE   */
-/* ============================= */
+async function loadSummary() {
+  // If we already have a DB summary, show it instantly, then optionally refresh
+  if (dbSummary && dbSummary.length > 30) {
+    showSummary({ summary: dbSummary, topics: [], difficulty: 'Medium', word_count: 0 }, false);
+  }
 
-let file = localStorage.getItem("studyFile") || "document.pdf";
+  try {
+    // PHP bridge: browser → PHP → Python (no CORS)
+    const res  = await fetch(`summary_bridge.php?id=${docId}`);
+    const data = await res.json();
 
-/* ============================= */
-/*   FAKE AI SUMMARY GENERATOR   */
-/* ============================= */
-
-// document.getElementById("summaryText").innerText =
-// "This document (" + file + ") has been analyzed using AI. It covers fundamental concepts, key definitions, important examples, and practical applications relevant to the subject. The system has extracted the most important study areas to help in quick revision and exam preparation.";
-
-/* Random read time */
-let minutes = Math.floor(Math.random() * 5) + 3;
-document.getElementById("readTime").innerText = "⏱ " + minutes + " min read";
-
-/* Random difficulty */
-const levels = ["Easy","Medium","Hard"];
-let level = levels[Math.floor(Math.random()*levels.length)];
-let diffBadge = document.getElementById("difficultyBadge");
-diffBadge.innerText = level + " Difficulty";
-diffBadge.className = "badge " + level.toLowerCase();
-
-/* ============================= */
-/*   TOPIC DATABASE (FAKE AI)    */
-/* ============================= */
-
-const topicDB = {
-
-    "ml":[
-        "Supervised Learning",
-        "Unsupervised Learning",
-        "Regression",
-        "Classification",
-        "Overfitting",
-        "Model Evaluation"
-    ],
-
-    "dsa":[
-        "Arrays",
-        "Linked Lists",
-        "Stacks & Queues",
-        "Trees",
-        "Graphs",
-        "Time Complexity"
-    ],
-
-    "os":[
-        "Process Scheduling",
-        "Deadlocks",
-        "Memory Management",
-        "Paging",
-        "Threads",
-        "CPU Scheduling"
-    ],
-
-    "dbms":[
-        "Normalization",
-        "Transactions",
-        "Indexing",
-        "SQL Queries",
-        "ER Model",
-        "Concurrency Control"
-    ],
-
-    "default":[
-        "Introduction",
-        "Core Concepts",
-        "Important Definitions",
-        "Examples",
-        "Applications",
-        "Summary"
-    ]
-};
-
-/* ============================= */
-/*   SUBJECT DETECTION           */
-/* ============================= */
-
-function detectSubject(name){
-    name = name.toLowerCase();
-
-    if(name.includes("ml") || name.includes("machine")) return "ml";
-    if(name.includes("dsa") || name.includes("data")) return "dsa";
-    if(name.includes("os") || name.includes("operating")) return "os";
-    if(name.includes("db") || name.includes("database")) return "dbms";
-
-    return "default";
+    if (data.error) { showError(data.error); return; }
+    showSummary(data, true);
+    showToast('Summary loaded!', 'success');
+  } catch (e) {
+    if (!dbSummary) {
+      showError('AI server not responding. Start it with: python/start_server.bat');
+    }
+  }
 }
 
-let subject = detectSubject(file);
-let topics = topicDB[subject];
+async function showSummary(data, animate) {
+  document.getElementById('sumSkeleton').style.display = 'none';
+  document.getElementById('sumContent').style.display  = 'block';
 
-/* ============================= */
-/*   RENDER TOPICS               */
-/* ============================= */
+  const el = document.getElementById('summaryText');
+  const text = data.summary || 'No summary available.';
 
-let topicContainer = document.getElementById("topicsContainer");
+  if (animate && text.length > 0) {
+    await typeText(el, text, 8);
+  } else {
+    el.textContent = text;
+  }
 
-topics.forEach(topic=>{
-    let div = document.createElement("div");
-    div.className = "topic";
-    div.innerText = topic;
+  // Meta chips
+  const meta = document.getElementById('metaRow');
+  const diff = data.difficulty || 'Medium';
+  const wc   = data.word_count || 0;
+  const ch   = data.chunks || 0;
+  const diffColor = { Easy:'chip-green', Medium:'chip-amber', Hard:'chip-purple' }[diff] || 'chip-amber';
+  meta.innerHTML = `
+    <span class="meta-chip chip-green">📖 ${wc > 0 ? wc.toLocaleString() + ' words' : 'Document indexed'}</span>
+    <span class="meta-chip chip-blue">🧩 ${ch > 0 ? ch + ' chunks' : 'Ready'}</span>
+    <span class="meta-chip ${diffColor}">⚡ ${diff} difficulty</span>
+  `;
 
-    div.onclick = function(){
-        showTopic(topic + " explained in simple terms for quick revision and better understanding.");
-    };
+  // Topics
+  const topics = data.topics || [];
+  document.getElementById('topicsSkeleton').style.display = 'none';
+  const grid = document.getElementById('topicsGrid');
+  grid.style.display = 'flex';
+  grid.innerHTML = '';
 
-    topicContainer.appendChild(div);
-});
-
-/* ============================= */
-/*   TOPIC EXPLANATION DISPLAY   */
-/* ============================= */
-
-function showTopic(text){
-    let box = document.getElementById("topicResult");
-    box.style.display = "block";
-    box.innerText = text;
+  if (topics.length > 0) {
+    topics.forEach(t => {
+      const chip = document.createElement('div');
+      chip.className = 'topic-chip';
+      chip.textContent = t;
+      chip.onclick = () => askTopic(t, chip);
+      grid.appendChild(chip);
+    });
+  } else {
+    grid.innerHTML = '<span class="text-muted" style="font-size:14px;">Topics will appear after asking questions.</span>';
+  }
 }
 
+function showError(msg) {
+  document.getElementById('sumSkeleton').style.display  = 'none';
+  document.getElementById('topicsSkeleton').style.display = 'none';
+  document.getElementById('topicsGrid').style.display   = 'flex';
+  document.getElementById('topicsGrid').innerHTML       = '';
+  const err = document.getElementById('sumError');
+  err.style.display = 'block';
+  err.textContent = '❌ ' + msg;
+  showToast(msg, 'error');
+}
+
+async function askTopic(topic, chipEl) {
+  // Toggle active
+  document.querySelectorAll('.topic-chip').forEach(c => c.classList.remove('active'));
+  chipEl.classList.add('active');
+
+  const box = document.getElementById('topicAnswer');
+  box.style.display = 'block';
+  box.textContent = '🔍 Looking up "' + topic + '" in the document…';
+
+  try {
+    const res  = await fetch('ask_bridge.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `question=${encodeURIComponent('Explain ' + topic + ' as covered in this document.')}&doc_id=${docId}`
+    });
+    const data = await res.json();
+    box.textContent = '';
+    await typeText(box, data.answer || 'No information found for this topic.', 10);
+    showToast('Topic explained!', 'success');
+  } catch (e) {
+    box.textContent = '❌ Could not fetch explanation: ' + e.message;
+  }
+}
+
+async function typeText(el, text, speed = 10) {
+  el.textContent = '';
+  const cursor = document.createElement('span');
+  cursor.className = 'cursor';
+  el.appendChild(cursor);
+  for (let i = 0; i < text.length; i++) {
+    el.insertBefore(document.createTextNode(text[i]), cursor);
+    if (i % 3 === 0) await new Promise(r => setTimeout(r, speed));
+  }
+  cursor.remove();
+}
+
+loadSummary();
 </script>
-
 </body>
 </html>

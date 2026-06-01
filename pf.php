@@ -1,267 +1,160 @@
-<?php session_start();
-if (!isset($_SESSION["user_name"])) {
-    header("Location: authentication.php");
-}
+<?php
+session_start();
+if (!isset($_SESSION["user_name"])) { header("Location: authentication.php"); exit(); }
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>StudyGenie Profile</title>
-
+<title>StudyGenie – Profile</title>
+<?php include 'theme.php'; ?>
 <style>
+.page-wrapper { max-width: 680px; margin: auto; }
 
-:root{
-    --bg:#e8f5e9;
-    --card:#ffffff;
-    --text:#222;
-    --accent:#2e7d32;
+.avatar {
+  width: 78px; height: 78px; border-radius: 50%;
+  background: linear-gradient(135deg, #1b5e20, #43a047);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px; font-weight: 900; color: #fff;
+  box-shadow: 0 8px 24px rgba(46,125,50,.35);
+  flex-shrink: 0;
 }
 
-.dark{
-    --bg:#121212;
-    --card:#1e1e1e;
-    --text:#f1f1f1;
-    --accent:#4caf50;
+.profile-header {
+  display: flex; align-items: center; gap: 20px; margin-bottom: 24px;
 }
+.profile-info h3 { font-size: 20px; font-weight: 800; color: var(--g2); }
+.profile-info p  { font-size: 14px; color: var(--text-muted); margin-top: 3px; }
 
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-    font-family:'Segoe UI',sans-serif;
+.info-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 0; border-bottom: 1px solid rgba(0,0,0,.05);
+  font-size: 15px;
 }
+.info-row:last-child { border-bottom: none; }
+.info-label { font-weight: 700; color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+.info-value { color: var(--text); font-weight: 600; }
 
-body{
-    background:var(--bg);
-    padding:30px;
-    color:var(--text);
-    transition:0.3s;
+.setting-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 0; border-bottom: 1px solid rgba(0,0,0,.05);
 }
+.setting-row:last-child { border-bottom: none; }
+.setting-label { font-size: 15px; font-weight: 600; }
+.setting-desc  { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 
-.header{
-    background:var(--card);
-    padding:18px 25px;
-    border-radius:18px;
-    box-shadow:0 8px 20px rgba(0,0,0,0.08);
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:25px;
+/* Toggle switch */
+.switch { position: relative; width: 52px; height: 28px; flex-shrink: 0; }
+.switch input { display: none; }
+.slider {
+  position: absolute; inset: 0; border-radius: 28px;
+  background: rgba(0,0,0,.15); cursor: pointer; transition: .3s;
 }
-
-.logo{
-    font-size:26px;
-    color:var(--accent);
-    font-weight:bold;
+.slider:before {
+  content: ''; position: absolute;
+  width: 22px; height: 22px;
+  background: #fff; border-radius: 50%;
+  top: 3px; left: 3px; transition: .3s;
+  box-shadow: 0 2px 6px rgba(0,0,0,.2);
 }
-.logo span{opacity:0.8}
+input:checked + .slider { background: #4caf50; }
+input:checked + .slider:before { transform: translateX(24px); }
 
-.card{
-    max-width:750px;
-    margin:auto;
-    background:var(--card);
-    padding:28px;
-    border-radius:20px;
-    box-shadow:0 10px 25px rgba(0,0,0,0.08);
-    margin-bottom:25px;
+.logout-link {
+  display: flex; align-items: center; gap: 10px;
+  padding: 13px 16px; border-radius: 12px;
+  background: rgba(244,67,54,.07); border: 1.5px solid rgba(244,67,54,.15);
+  color: #c62828; font-weight: 700; font-size: 15px;
+  text-decoration: none; transition: .2s;
 }
+.logout-link:hover { background: rgba(244,67,54,.13); transform: translateX(4px); }
 
-.card h2{
-    color:var(--accent);
-    margin-bottom:18px;
-}
-
-/* PROFILE INFO */
-.info{
-    margin-bottom:14px;
-    font-size:16px;
-}
-
-.label{
-    font-weight:600;
-    opacity:0.7;
-}
-
-/* TOGGLES */
-.setting{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:18px;
-}
-
-.switch{
-    position:relative;
-    width:50px;
-    height:25px;
-}
-
-.switch input{
-    display:none;
-}
-
-.slider{
-    position:absolute;
-    cursor:pointer;
-    background:#ccc;
-    border-radius:25px;
-    width:100%;
-    height:100%;
-    transition:.3s;
-}
-
-.slider:before{
-    content:"";
-    position:absolute;
-    height:19px;
-    width:19px;
-    left:3px;
-    top:3px;
-    background:white;
-    border-radius:50%;
-    transition:.3s;
-}
-
-input:checked + .slider{
-    background:var(--accent);
-}
-
-input:checked + .slider:before{
-    transform:translateX(25px);
-}
-
-.logout-btn{
-    display: inline-block;
-    padding: 8px 18px;
-    background-color: #d32f2f;
-    color: white;
-    text-decoration: none;
-    border-radius: 6px;
-    font-weight: 500;
-    transition: 0.3s ease;
-}
-
-.logout-btn:hover{
-    background-color: #b71c1c;
-    transform: scale(1.05);
-}
-
+.section-gap { margin-bottom: 16px; }
 </style>
 </head>
 <body>
+<div class="page-wrapper">
+  <?php include "navbar.php"; ?>
 
-<div class="header">
-    <?php include "navbar.php"; ?>
-    <div>Profile & Settings</div>
-</div>
-
-<!-- USER PROFILE -->
-<div class="card">
-    <h2>User Profile</h2>
-
-    <div class="info">
-        <span class="label">Name:</span> <span id="name"><?php echo $_SESSION["user_name"]; ?></span>
+  <!-- Profile card -->
+  <div class="sg-card section-gap">
+    <div class="profile-header">
+      <div class="avatar"><?= strtoupper(substr($_SESSION["user_name"], 0, 1)) ?></div>
+      <div class="profile-info">
+        <h3><?= htmlspecialchars($_SESSION["user_name"]) ?></h3>
+        <p>Student · StudyGenie</p>
+      </div>
     </div>
 
-    <div class="info">
-        <span class="label">Email:</span> <span id="email"><?php echo $_SESSION["user_email"]; ?></span>
+    <div class="info-row">
+      <span class="info-label">Email</span>
+      <span class="info-value"><?= htmlspecialchars($_SESSION["user_email"]) ?></span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Member Since</span>
+      <span class="info-value"><?= date("d M Y", strtotime($_SESSION["user_date"])) ?></span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Role</span>
+      <span class="info-value"><span class="badge badge-green">Student</span></span>
+    </div>
+  </div>
+
+  <!-- Preferences -->
+  <div class="sg-card section-gap">
+    <h2 class="section-title">Preferences</h2>
+
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">🌙 Dark Theme</div>
+        <div class="setting-desc">Switch between light and dark mode</div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="themeToggle">
+        <span class="slider"></span>
+      </label>
     </div>
 
-    <div class="info">
-        <span class="label">Joined Date:</span> <span id="joined"><?php echo date("d M Y", strtotime($_SESSION["user_date"])); ?></span>
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">⚡ Typing Animation</div>
+        <div class="setting-desc">Animate AI answers character-by-character</div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="animToggle" checked>
+        <span class="slider"></span>
+      </label>
     </div>
-</div>
+  </div>
 
-<!-- PREFERENCES -->
-<div class="card">
-    <h2>Preferences</h2>
+  <!-- Logout -->
+  <div class="sg-card-flat">
+    <a href="logout.php" class="logout-link">🚪 Sign Out</a>
+  </div>
 
-    <div class="setting">
-        <span>Dark Theme</span>
-        <label class="switch">
-            <input type="checkbox" id="themeToggle">
-            <span class="slider"></span>
-        </label>
-    </div>
-
-    <!-- <div class="setting">
-        <span>Notifications</span>
-        <label class="switch">
-            <input type="checkbox" id="notifyToggle">
-            <span class="slider"></span>
-        </label>
-    </div> -->
-
-</div>
-
-<div class="card">
-    <a href="logout.php" class="logout-btn">Logout</a>
 </div>
 
 <script>
-
-/* ============================= */
-/*   FAKE USER DATA              */
-/* ============================= */
-
-// if(!localStorage.getItem("userName")){
-//     localStorage.setItem("userName","Student User");
-//     localStorage.setItem("userEmail","student@kiit.ac.in");
-//     localStorage.setItem("joinedDate",new Date().toDateString());
-// }
-
-// document.getElementById("name").innerText =
-//     localStorage.getItem("userName");
-
-// document.getElementById("email").innerText =
-//     localStorage.getItem("userEmail");
-
-// document.getElementById("joined").innerText =
-//     localStorage.getItem("joinedDate");
-
-/* ============================= */
-/*   THEME TOGGLE                */
-/* ============================= */
-
-const toggle = document.getElementById("themeToggle");
-
-/* Load saved theme */
-let savedTheme = localStorage.getItem("theme");
-
-if(savedTheme === "dark"){
-    document.body.classList.add("dark");
-    toggle.checked = true;
+// Theme toggle
+const themeToggle = document.getElementById("themeToggle");
+if (localStorage.getItem("theme") === "dark") {
+  document.body.classList.add("dark");
+  themeToggle.checked = true;
 }
-
-/* Change theme */
-toggle.addEventListener("change", function(){
-
-    if(toggle.checked){
-        document.body.classList.add("dark");
-        localStorage.setItem("theme","dark");
-    }else{
-        document.body.classList.remove("dark");
-        localStorage.setItem("theme","light");
-    }
-
+themeToggle.addEventListener("change", () => {
+  document.body.classList.toggle("dark", themeToggle.checked);
+  localStorage.setItem("theme", themeToggle.checked ? "dark" : "light");
+  showToast(themeToggle.checked ? "Dark mode on" : "Light mode on", "info");
 });
-/* ============================= */
-/*   NOTIFICATION TOGGLE         */
-/* ============================= */
 
-// const notifyToggle = document.getElementById("notifyToggle");
-
-// if(localStorage.getItem("notify")==="on"){
-//     notifyToggle.checked=true;
-// }
-
-// notifyToggle.addEventListener("change",()=>{
-//     localStorage.setItem("notify",notifyToggle.checked?"on":"off");
-// });
-
+// Anim toggle
+const animToggle = document.getElementById("animToggle");
+animToggle.checked = localStorage.getItem("typingAnim") !== "off";
+animToggle.addEventListener("change", () => {
+  localStorage.setItem("typingAnim", animToggle.checked ? "on" : "off");
+  showToast("Preference saved.", "success");
+});
 </script>
-
 </body>
 </html>
