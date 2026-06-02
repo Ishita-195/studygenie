@@ -7,7 +7,9 @@ $msg = ""; $msgType = "";
 if (isset($_POST["upload"])) {
     $file = $_FILES["pdfFile"];
     $name = $file["name"]; $tmp = $file["tmp_name"]; $size = $file["size"];
-    if ($file["type"] !== "application/pdf")       { $msg = "Only PDF files are allowed."; $msgType = "error"; }
+    $ext  = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+    $allowed = ["pdf", "docx"];
+    if (!in_array($ext, $allowed))                 { $msg = "Only PDF and DOCX files are allowed."; $msgType = "error"; }
     elseif ($size > 100 * 1024 * 1024)             { $msg = "File too large. Maximum 100 MB."; $msgType = "error"; }
     else {
         $newName = time() . "_" . basename($name);
@@ -132,20 +134,20 @@ if (isset($_POST["upload"])) {
     <form method="POST" enctype="multipart/form-data" id="uploadForm">
       <div class="drop-area" id="dropArea">
         <span class="drop-icon">📄</span>
-        <p class="drop-text">Drag &amp; drop your PDF here</p>
+        <p class="drop-text">Drag &amp; drop your PDF or Word document here</p>
         <p class="drop-hint">or</p>
         <button type="button" class="choose-btn"
                 onclick="document.getElementById('fileInput').click()">
           Browse File
         </button>
-        <input type="file" id="fileInput" name="pdfFile" hidden accept=".pdf">
+        <input type="file" id="fileInput" name="pdfFile" hidden accept=".pdf,.docx">
         <div class="file-chosen" id="fileChosen"></div>
       </div>
 
       <button type="submit" name="upload" class="sg-btn sg-btn-primary">
         ⚡ Upload &amp; Index
       </button>
-      <p class="hint-text">PDF only · Max 100 MB · Your file is private</p>
+      <p class="hint-text">PDF &amp; DOCX · Max 100 MB · Your file is private</p>
     </form>
   </div>
 </div>
@@ -163,7 +165,8 @@ fileInput.addEventListener("change", () => handleFile(fileInput.files[0]));
 
 function handleFile(file) {
   if (!file) return;
-  if (file.type !== "application/pdf") { showToast("Only PDF files allowed.", "error"); return; }
+  const okExt = /\.(pdf|docx)$/i.test(file.name);
+  if (!okExt) { showToast("Only PDF and DOCX files are allowed.", "error"); return; }
   if (file.size > MAX) { showToast("File exceeds 100 MB limit.", "error"); return; }
   const dt = new DataTransfer(); dt.items.add(file); fileInput.files = dt.files;
   fileChosen.style.display = "block";

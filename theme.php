@@ -98,8 +98,14 @@ body::after {
    PAGE FADE-IN
 ═══════════════════════════════════════════ */
 .page-wrapper {
-  animation: fadeIn .45s ease both;
+  animation: pageIn .4s ease both;   /* opacity-only: no lingering transform
+                                        (a transform here would break the
+                                         fixed sidebar's positioning) */
   padding: 22px;
+}
+@keyframes pageIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(14px); }
@@ -301,61 +307,90 @@ body::after {
 ═══════════════════════════════════════════ */
 .sidenav {
   height: 100%;
-  width: 0;
+  width: 0;                       /* mobile default: closed */
   position: fixed;
   z-index: 200;
   top: 0;
   left: 0;
-  background: rgba(10,22,40,.96);
+  background: rgba(10,22,40,.97);
   backdrop-filter: blur(24px);
-  overflow-x: hidden;
-  transition: width .4s cubic-bezier(.4,0,.2,1);
-  padding-top: 70px;
+  overflow: hidden;
+  transition: width .35s cubic-bezier(.4,0,.2,1);
   border-right: 1px solid rgba(76,175,80,.15);
+  display: flex;
+  flex-direction: column;
+}
+.sidenav .nav-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 22px; min-width: 250px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.sidenav .nav-brand {
+  font-size: 21px; font-weight: 900; white-space: nowrap;
+  background: linear-gradient(135deg,#4caf50,#00e676);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.sidenav .nav-links {
+  flex: 1; padding: 14px 0; min-width: 250px; overflow-y: auto;
 }
 .sidenav a {
-  padding: 13px 14px 13px 28px;
+  padding: 12px 22px;
   text-decoration: none;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
-  color: rgba(255,255,255,.65);
+  color: rgba(255,255,255,.6);
   display: flex;
   align-items: center;
-  gap: 12px;
-  transition: all .2s;
+  gap: 13px;
+  transition: all .18s;
   border-left: 3px solid transparent;
-  letter-spacing: .2px;
+  white-space: nowrap;
 }
+.sidenav a .ni { font-size: 18px; width: 22px; text-align: center; }
 .sidenav a:hover {
   color: #fff;
   background: rgba(76,175,80,.1);
   border-left-color: #4caf50;
 }
+.sidenav a.active {
+  color: #fff;
+  background: rgba(76,175,80,.16);
+  border-left-color: #00e676;
+}
+.sidenav .nav-footer {
+  padding: 12px 0; min-width: 250px;
+  border-top: 1px solid rgba(255,255,255,.07);
+}
+.sidenav .nav-logout { color: rgba(255,120,120,.78); }
+.sidenav .nav-logout:hover {
+  color: #ff8a80; background: rgba(244,67,54,.12); border-left-color: #e53935;
+}
 .sidenav .closebtn {
-  position: absolute;
-  top: 14px;
-  right: 18px;
-  font-size: 28px;
-  color: rgba(255,255,255,.5);
-  cursor: pointer;
-  background: none;
-  border: none;
-  font-family: inherit;
-  line-height: 1;
-  transition: color .2s;
+  font-size: 24px; color: rgba(255,255,255,.5);
+  cursor: pointer; background: none; border: none;
+  font-family: inherit; line-height: 1; transition: color .2s;
 }
 .sidenav .closebtn:hover { color: #fff; }
-.sidenav .nav-brand {
-  position: absolute;
-  top: 18px;
-  left: 22px;
-  font-size: 20px;
-  font-weight: 900;
-  background: linear-gradient(135deg,#4caf50,#00e676);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+
+/* Hamburger button (mobile only) */
+.ham-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 22px; color: var(--g2); padding: 0 6px 0 0;
+  display: inline-flex; align-items: center;
 }
+
+/* Topbar title + user */
+.topbar-title { font-size: 15px; font-weight: 700; color: var(--g2); flex: 1; }
+.topbar-user { display: flex; align-items: center; gap: 10px; }
+.topbar-user .tb-name { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+.topbar-user .tb-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg,#2e7d32,#43a047);
+  color: #fff; font-weight: 800; font-size: 15px;
+  display: flex; align-items: center; justify-content: center;
+}
+
 #overlay {
   position: fixed;
   inset: 0;
@@ -364,6 +399,36 @@ body::after {
   display: none;
   z-index: 150;
   transition: opacity .3s;
+}
+
+/* ═══════════════════════════════════════════
+   DESKTOP APP-SHELL  (persistent sidebar + full-width content)
+═══════════════════════════════════════════ */
+@media (min-width: 1024px) {
+  .sidenav {
+    width: 250px !important;                 /* always open on desktop */
+    box-shadow: 2px 0 30px rgba(0,0,0,.18);
+  }
+  .sidenav .closebtn { display: none; }       /* no close button on desktop */
+  #overlay { display: none !important; }      /* never dim on desktop */
+  .ham-btn { display: none !important; }      /* no hamburger on desktop */
+
+  /* Offset main content by sidebar width + stretch full width.
+     :has() targets only pages that actually render a sidebar
+     (login / processing pages have none, so they stay centered). */
+  body:has(.sidenav) .page-wrapper {
+    margin-left: 250px !important;
+    max-width: none !important;
+    width: auto !important;
+    padding: 26px 40px !important;
+  }
+}
+
+/* Large desktops — a little more breathing room */
+@media (min-width: 1600px) {
+  body:has(.sidenav) .page-wrapper {
+    padding: 30px 56px !important;
+  }
 }
 
 /* ═══════════════════════════════════════════
@@ -451,7 +516,7 @@ window.showToast = showToast;
 
 /* ── Sidebar ───────────────────────────── */
 function openNav() {
-  document.getElementById('mySidenav').style.width = '260px';
+  document.getElementById('mySidenav').style.width = '250px';
   document.getElementById('overlay').style.display = 'block';
 }
 function closeNav() {

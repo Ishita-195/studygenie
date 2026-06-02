@@ -154,6 +154,96 @@ def _load_cache(filename: str, filepath: Path) -> bool:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+#  DOCUMENT EXTRACTION  (PDF + OCR fallback + DOCX)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Detect OCR availability once at startup
+_OCR_AVAILABLE = False
+try:
+    import pytesseract
+    from PIL import Image
+    # Common Windows install path for the Tesseract engine
+    _tess_paths = [
+        r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+        r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+    ]
+    for _p in _tess_paths:
+        if os.path.exists(_p):
+            pytesseract.pytesseract.tesseract_cmd = _p
+            break
+    pytesseract.get_tesseract_version()   # raises if engine missing
+    _OCR_AVAILABLE = True
+    print("[STARTUP] ✅ OCR available (scanned PDFs supported)")
+except Exception:
+    print("[STARTUP] ⚠️ OCR not available — scanned/image PDFs will be skipped")
+    print("[STARTUP]    Install Tesseract: https://github.com/UB-Mannheim/tesseract/wiki")
+
+try:
+    import docx as _docx          # python-docx
+    _DOCX_AVAILABLE = True
+except ImportError:
+    _DOCX_AVAILABLE = False
+
+
+def _ocr_pdf(doc) -> str:
+    """Run OCR on every page of a PDF (used when normal extraction finds no text)."""
+    if not _OCR_AVAILABLE:
+        return ""
+    text_parts = []
+    for page in doc:
+        pix = page.get_pixmap(dpi=200)            # render page to image
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        text_parts.append(pytesseract.image_to_string(img))
+    return " ".join(text_parts)
+
+
+def _extract_text(filepath: Path):
+    """
+    Extract text from a document. Supports:
+      - .pdf  (text-based → OCR fallback for scanned PDFs)
+      - .docx (Microsoft Word)
+    Returns (text, page_count).
+    """
+    ext = filepath.suffix.lower()
+
+    if ext == ".docx":
+        if not _DOCX_AVAILABLE:
+            raise ValueError("DOCX support not installed (pip install python-docx).")
+        d = _docx.Document(str(filepath))
+        paras  = [p.text for p in d.paragraphs if p.text.strip()]
+        # Include table cell text too
+        for table in d.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    if cell.text.strip():
+                        paras.append(cell.text)
+        return " ".join(paras), 1
+
+    # Default: PDF
+    doc = fitz.open(str(filepath))
+    try:
+        pages    = len(doc)
+        all_text = "".join(page.get_text() + " " for page in doc)
+        # If almost no text was extracted, the PDF is likely scanned → OCR
+        if len(all_text.split()) < 20 and _OCR_AVAILABLE:
+            print(f"[INDEX] Low text — running OCR on {pages} pages…")
+            all_text = _ocr_pdf(doc)
+        return all_text, pages
+    finally:
+        doc.close()
+
+
+SUPPORTED_EXTS = (".pdf", ".docx")
+
+def _list_documents():
+    """All supported documents in the upload folder (PDF + DOCX)."""
+    docs = []
+    for ext in SUPPORTED_EXTS:
+        docs.extend(UPLOAD_DIR.glob(f"*{ext}"))
+    return docs
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 #  INDEXING
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -163,18 +253,14 @@ def _index_file(filename: str, filepath: Path):
     size_mb = filepath.stat().st_size / 1_048_576
     print(f"\n[INDEX] {filename} ({size_mb:.1f} MB)")
 
-    doc = fitz.open(str(filepath))
-    try:
-        pages      = len(doc)
-        all_text   = "".join(page.get_text() + " " for page in doc)
-    finally:
-        doc.close()
+    all_text, pages = _extract_text(filepath)
 
     words = all_text.split()
     print(f"[INDEX] {pages} pages, {len(words)} words")
 
     if len(words) < 20:
-        raise ValueError(f"Too little text ({len(words)} words). PDF may be scanned/image-based.")
+        hint = "" if _OCR_AVAILABLE else " (install Tesseract OCR to read scanned PDFs)"
+        raise ValueError(f"Too little text ({len(words)} words). Document may be scanned/image-based{hint}.")
 
     chunks = [
         " ".join(words[i:i + CHUNK_WORDS]).strip()
@@ -235,7 +321,7 @@ def _ensure_indexed(filename: str):
             del per_file_data[filename]
 
     if not filepath.exists():
-        available = [f.name for f in UPLOAD_DIR.glob("*.pdf")]
+        available = [f.name for f in _list_documents()]
         return False, f"File '{filename}' not found on server. Available: {available}"
 
     # Try loading from disk cache first (fast)
@@ -263,8 +349,8 @@ def _auto_index_all_bg():
     2. Wait for semantic model to be ready
     3. Generate embeddings for any doc missing them
     """
-    pdfs = list(UPLOAD_DIR.glob("*.pdf"))
-    print(f"[STARTUP] Background indexing {len(pdfs)} PDFs…")
+    pdfs = _list_documents()
+    print(f"[STARTUP] Background indexing {len(pdfs)} documents…")
     for pdf in pdfs:
         fn = pdf.name
         with _index_lock:
@@ -997,8 +1083,8 @@ def summarize():
 
 @app.route("/reindex-all", methods=["POST"])
 def reindex_all():
-    """Force re-index all PDFs (clears cache first)."""
-    pdfs     = list(UPLOAD_DIR.glob("*.pdf"))
+    """Force re-index all documents (clears cache first)."""
+    pdfs     = _list_documents()
     results  = {}
     for pdf in pdfs:
         fn = pdf.name
@@ -1049,7 +1135,7 @@ def status():
 
 @app.route("/debug", methods=["GET"])
 def debug():
-    pdfs_on_disk = [f.name for f in UPLOAD_DIR.glob("*.pdf")]
+    pdfs_on_disk = [f.name for f in _list_documents()]
     cached       = [f.name for f in CACHE_DIR.glob("*.pkl")]
     with _index_lock:
         indexed  = list(per_file_data.keys())
