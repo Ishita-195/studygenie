@@ -41,39 +41,36 @@ body { display:flex; align-items:center; justify-content:center; min-height:100v
 }
 
 .card h2 {
-  font-size:20px; font-weight:800;
-  background:linear-gradient(135deg,#1b5e20,#43a047);
-  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-  background-clip:text; margin-bottom:6px;
+  font-size:20px; font-weight:700; color:var(--text); margin-bottom:6px;
 }
 .filename { color:var(--text-muted); font-size:13px; word-break:break-all; margin-bottom:22px; }
 
-.prog-track { width:100%; height:10px; background:rgba(0,0,0,.08); border-radius:10px; overflow:hidden; margin-bottom:6px; }
-.prog-fill  { height:100%; width:5%; background:linear-gradient(90deg,#2e7d32,#00e676); border-radius:10px; transition:width .6s ease; }
+.prog-track { width:100%; height:10px; background:var(--surface-3); border-radius:10px; overflow:hidden; margin-bottom:6px; }
+.prog-fill  { height:100%; width:5%; background:linear-gradient(90deg,var(--accent),var(--accent-bright)); border-radius:10px; transition:width .6s ease; }
 .prog-label { font-size:12px; color:var(--text-muted); margin-bottom:22px; text-align:right; }
 
 .steps { text-align:left; display:flex; flex-direction:column; gap:9px; margin-bottom:20px; }
 .step {
   display:flex; align-items:center; gap:13px;
   padding:11px 15px; border-radius:12px;
-  background:rgba(0,0,0,.03); font-size:13px; font-weight:600;
-  color:var(--text-muted); border:1px solid transparent; transition:all .35s;
+  background:var(--surface-2); font-size:13px; font-weight:600;
+  color:var(--text-muted); border:1px solid var(--border); transition:all .35s;
 }
-.step.active { background:rgba(76,175,80,.1); color:var(--g2); border-color:rgba(76,175,80,.2); }
-.step.done   { background:rgba(76,175,80,.06); color:var(--g3); }
+.step.active { background:var(--accent-soft); color:var(--accent); border-color:var(--accent-line); }
+.step.done   { background:var(--surface-2); color:var(--accent); }
 .step-icon { font-size:18px; flex-shrink:0; }
 .step.active .step-icon { animation:spin .9s linear infinite; }
 .step.done   .step-icon { animation:none; }
 @keyframes spin { to{transform:rotate(360deg);} }
 
 .status-msg { font-size:13px; min-height:20px; transition:.3s; color:var(--text-muted); margin-bottom:14px; }
-.status-msg.ok  { color:#2e7d32; font-weight:700; }
-.status-msg.err { color:#c62828; font-weight:700; }
+.status-msg.ok  { color:var(--accent); font-weight:700; }
+.status-msg.err { color:#ff7b72; font-weight:700; }
 
 .note {
-  padding:11px 15px; background:rgba(76,175,80,.07);
-  border:1px solid rgba(76,175,80,.15); border-radius:11px;
-  font-size:12px; color:var(--g2); font-weight:600;
+  padding:11px 15px; background:var(--surface-2);
+  border:1px solid var(--border); border-radius:11px;
+  font-size:12px; color:var(--text-muted); font-weight:600;
 }
 </style>
 </head>

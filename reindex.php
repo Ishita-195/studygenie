@@ -68,10 +68,10 @@ if ($triggered) {
 <style>
 .page-wrapper { max-width:700px; margin:auto; }
 .result-item { padding:11px 16px; border-radius:10px; margin-bottom:8px; font-size:14px; font-weight:600; word-break:break-all; }
-.result-ok   { background:rgba(76,175,80,.1);  color:#2e7d32; }
-.result-warn { background:rgba(255,193,7,.12); color:#856404; }
-.result-error{ background:rgba(244,67,54,.08); color:#c62828; }
-.info-box { padding:16px; background:rgba(33,150,243,.08); border:1px solid rgba(33,150,243,.2); border-radius:12px; font-size:14px; color:#1565c0; margin-bottom:20px; line-height:1.6; }
+.result-ok   { background:var(--accent-soft);   color:var(--accent); }
+.result-warn { background:rgba(210,153,34,.14);  color:#e3b341; }
+.result-error{ background:rgba(248,81,73,.1);    color:#ff7b72; }
+.info-box { padding:16px; background:var(--surface-2); border:1px solid var(--border); border-left:3px solid var(--info); border-radius:12px; font-size:14px; color:var(--text-muted); margin-bottom:20px; line-height:1.6; }
 </style>
 </head>
 <body>

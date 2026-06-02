@@ -62,12 +62,7 @@ $docs = $con->query(
 .stat-icon-purple { background: rgba(156,39,176,.12); }
 .stat-icon-amber  { background: rgba(255,193,7,.15); }
 .stat-label { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 6px; }
-.stat-value {
-  font-size: 34px; font-weight: 900;
-  background: linear-gradient(135deg, #1b5e20, #43a047);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
+.stat-value { font-size: 32px; font-weight: 800; color: var(--text); letter-spacing: -.5px; }
 
 /* PROGRESS RING */
 .ring-wrap { display: flex; align-items: center; gap: 14px; }
@@ -79,21 +74,21 @@ $docs = $con->query(
   display: flex; justify-content: space-between; align-items: center;
   margin-bottom: 18px;
 }
-.section-head h2 { font-size: 18px; font-weight: 800; color: var(--g2); }
+.section-head h2 { font-size: 16px; font-weight: 700; color: var(--text); }
 
 table { width: 100%; border-collapse: collapse; }
 th {
-  font-size: 11px; font-weight: 800; text-transform: uppercase;
-  letter-spacing: .7px; color: var(--text-muted);
-  padding: 10px 14px; border-bottom: 1px solid rgba(0,0,0,.06);
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .7px; color: var(--text-dim);
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
   text-align: left;
 }
-td { padding: 13px 14px; border-bottom: 1px solid rgba(0,0,0,.04); font-size: 14px; }
+td { padding: 13px 14px; border-bottom: 1px solid var(--border); font-size: 14px; color: var(--text); }
 tr:last-child td { border-bottom: none; }
 tbody tr { transition: background .15s; cursor: pointer; }
-tbody tr:hover td { background: rgba(76,175,80,.04); }
+tbody tr:hover td { background: var(--surface-2); }
 
-.file-link { color: var(--g2); font-weight: 600; }
+.file-link { color: var(--text); font-weight: 600; }
 .file-link:hover { text-decoration: underline; }
 
 .score-pill {

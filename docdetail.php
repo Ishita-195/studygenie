@@ -43,10 +43,8 @@ $status      = $row['status'] ?? 'processing';
 .breadcrumb a { color:rgba(255,255,255,.55); } .breadcrumb a:hover { color:#fff; }
 
 .file-title {
-  font-size:20px; font-weight:800;
-  background:linear-gradient(135deg,#1b5e20,#43a047);
-  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-  background-clip:text; word-break:break-all; margin-bottom:4px;
+  font-size:20px; font-weight:800; color:var(--text);
+  word-break:break-all; margin-bottom:4px; letter-spacing:-.3px;
 }
 .file-meta { font-size:13px; color:var(--text-muted); margin-bottom:20px; }
 
@@ -64,60 +62,59 @@ $status      = $row['status'] ?? 'processing';
 .action-card .ac-icon  { font-size:24px; }
 .action-card .ac-label { font-size:14px; font-weight:700; }
 .action-card .ac-desc  { font-size:12px; color:var(--text-muted); }
-.ac-green  { background:rgba(76,175,80,.08);  border-color:rgba(76,175,80,.2);  }
-.ac-blue   { background:rgba(33,150,243,.07); border-color:rgba(33,150,243,.2); }
-.ac-purple { background:rgba(156,39,176,.07); border-color:rgba(156,39,176,.2); }
-.ac-red    { background:rgba(244,67,54,.06);  border-color:rgba(244,67,54,.15); }
-.ac-green .ac-label  { color:#2e7d32; }
-.ac-blue  .ac-label  { color:#1565c0; }
-.ac-purple .ac-label { color:#7b1fa2; }
-.ac-red   .ac-label  { color:#c62828; }
+.ac-green, .ac-blue, .ac-purple { background:var(--surface-2); border-color:var(--border); }
+.ac-red    { background:rgba(248,81,73,.08); border-color:rgba(248,81,73,.2); }
+.action-card:hover.ac-green, .action-card:hover.ac-blue, .action-card:hover.ac-purple { border-color:var(--accent-line); }
+.ac-green .ac-label  { color:var(--accent); }
+.ac-blue  .ac-label  { color:#79b8ff; }
+.ac-purple .ac-label { color:#d2a8ff; }
+.ac-red   .ac-label  { color:#ff7b72; }
 .delete-form { width:100%; }
-.delete-form .action-card { width:100%; background:rgba(244,67,54,.06); border:1.5px solid rgba(244,67,54,.15); font-family:inherit; cursor:pointer; }
+.delete-form .action-card { width:100%; background:rgba(248,81,73,.08); border:1px solid rgba(248,81,73,.2); font-family:inherit; cursor:pointer; }
 
 /* Summary section */
 .summary-section { margin-top:4px; }
 .summary-text {
-  font-size:15px; line-height:1.8; color:#1a1a2e;
+  font-size:15px; line-height:1.8; color:var(--text);
   white-space:pre-wrap;
 }
-.cursor { display:inline-block; width:2px; height:1em; background:var(--g2); margin-left:2px; animation:blink .7s step-end infinite; vertical-align:text-bottom; }
+.cursor { display:inline-block; width:2px; height:1em; background:var(--accent); margin-left:2px; animation:blink .7s step-end infinite; vertical-align:text-bottom; }
 @keyframes blink { 50%{opacity:0} }
 
-.meta-chips { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; padding-top:12px; border-top:1px solid rgba(0,0,0,.06); }
-.meta-chip  { padding:5px 13px; border-radius:20px; font-size:12px; font-weight:700; }
-.chip-green  { background:rgba(76,175,80,.12); color:#2e7d32; }
-.chip-blue   { background:rgba(33,150,243,.1); color:#1565c0; }
-.chip-amber  { background:rgba(255,193,7,.12); color:#856404; }
+.meta-chips { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; padding-top:12px; border-top:1px solid var(--border); }
+.meta-chip  { padding:5px 13px; border-radius:20px; font-size:12px; font-weight:600; }
+.chip-green  { background:var(--accent-soft); color:var(--accent); }
+.chip-blue   { background:rgba(88,166,255,.13); color:#79b8ff; }
+.chip-amber  { background:rgba(210,153,34,.16); color:#e3b341; }
 
 /* Topics */
 .topics-wrap { display:flex; flex-wrap:wrap; gap:10px; margin-top:6px; }
 .topic-chip {
   padding:9px 16px; border-radius:24px; cursor:pointer;
-  font-size:13px; font-weight:600;
-  background:rgba(76,175,80,.08); color:var(--g2);
-  border:1.5px solid rgba(76,175,80,.2);
+  font-size:13px; font-weight:500;
+  background:var(--surface-2); color:var(--text-muted);
+  border:1px solid var(--border);
   transition:all .2s;
 }
-.topic-chip:hover { background:rgba(76,175,80,.18); transform:translateY(-2px); }
-.topic-chip.active { background:linear-gradient(135deg,#2e7d32,#43a047); color:#fff; border-color:transparent; }
+.topic-chip:hover { background:var(--accent-soft); border-color:var(--accent-line); color:var(--accent); transform:translateY(-2px); }
+.topic-chip.active { background:var(--accent); color:#06140a; border-color:transparent; font-weight:600; }
 
 .topic-answer {
   margin-top:14px; padding:20px;
-  background:linear-gradient(135deg,rgba(232,245,233,.95),rgba(241,248,233,.95));
-  border-left:4px solid #4caf50; border-radius:14px;
-  font-size:14px; line-height:1.75; display:none; white-space:pre-wrap;
+  background:var(--surface-2); border:1px solid var(--border);
+  border-left:3px solid var(--accent); border-radius:12px;
+  font-size:14px; line-height:1.75; display:none; white-space:pre-wrap; color:var(--text);
 }
 
 /* Processing badge */
-.status-badge { padding:5px 14px; border-radius:20px; font-size:12px; font-weight:700; display:inline-flex; align-items:center; gap:5px; }
-.badge-processing { background:rgba(255,193,7,.15); color:#856404; }
-.badge-completed  { background:rgba(76,175,80,.15);  color:#2e7d32; }
+.status-badge { padding:5px 14px; border-radius:20px; font-size:12px; font-weight:600; display:inline-flex; align-items:center; gap:5px; }
+.badge-processing { background:rgba(210,153,34,.16); color:#e3b341; }
+.badge-completed  { background:var(--accent-soft);  color:var(--accent); }
 
 .not-indexed-warn {
   padding:14px 16px; border-radius:12px;
-  background:rgba(255,193,7,.1); border:1px solid rgba(255,193,7,.3);
-  color:#856404; font-size:14px; font-weight:600; margin-bottom:16px;
+  background:rgba(210,153,34,.1); border:1px solid rgba(210,153,34,.3);
+  color:#e3b341; font-size:14px; font-weight:600; margin-bottom:16px;
   display:flex; align-items:center; gap:10px;
 }
 
@@ -163,6 +160,16 @@ $status      = $row['status'] ?? 'processing';
         <span class="ac-icon">🧪</span>
         <span class="ac-label">Take Quiz</span>
         <span class="ac-desc">Test your knowledge</span>
+      </a>
+      <a href="studyplan.php?id=<?= $id ?>" class="action-card ac-green">
+        <span class="ac-icon">🗓️</span>
+        <span class="ac-label">Study Plan</span>
+        <span class="ac-desc">Day-by-day schedule</span>
+      </a>
+      <a href="conceptmap.php?id=<?= $id ?>" class="action-card ac-blue">
+        <span class="ac-icon">🧩</span>
+        <span class="ac-label">Concept Map</span>
+        <span class="ac-desc">Visualise connections</span>
       </a>
       <form method="POST" class="delete-form" onsubmit="return confirm('Delete this file permanently?');">
         <button type="submit" name="delete_file" class="action-card ac-red">

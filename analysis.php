@@ -105,7 +105,7 @@ foreach ($upRows as $ur) {
 .stat-tile:hover { transform: translateY(-4px); }
 .tile-icon { font-size: 24px; margin-bottom: 10px; }
 .tile-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 4px; }
-.tile-value { font-size: 30px; font-weight: 900; background: linear-gradient(135deg,#1b5e20,#43a047); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.tile-value { font-size: 30px; font-weight: 800; color: var(--text); letter-spacing: -.5px; }
 
 /* Charts */
 .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 20px; }
@@ -117,29 +117,29 @@ foreach ($upRows as $ur) {
   border: 1px solid var(--glass-border); border-radius: var(--radius);
   padding: 24px; box-shadow: var(--glass-shadow);
 }
-.chart-card h3 { font-size: 15px; font-weight: 800; color: var(--g2); margin-bottom: 16px; }
+.chart-card h3 { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 16px; }
 
 /* Table */
 .doc-table { width: 100%; border-collapse: collapse; }
-.doc-table th { font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; padding: 10px 12px; border-bottom: 1px solid rgba(0,0,0,.06); text-align: left; }
-.doc-table td { padding: 13px 12px; font-size: 14px; border-bottom: 1px solid rgba(0,0,0,.04); }
+.doc-table th { font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: .5px; padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left; }
+.doc-table td { padding: 13px 12px; font-size: 14px; border-bottom: 1px solid var(--border); color: var(--text); }
 .doc-table tr:last-child td { border-bottom: none; }
-.doc-table tbody tr:hover td { background: rgba(76,175,80,.04); }
-.doc-name { color: var(--g2); font-weight: 600; font-size: 13px; word-break: break-all; max-width: 220px; }
+.doc-table tbody tr:hover td { background: var(--surface-2); }
+.doc-name { color: var(--text); font-weight: 600; font-size: 13px; word-break: break-all; max-width: 220px; }
 
-.score-pill { padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 800; }
-.pill-great { background: linear-gradient(135deg,#2e7d32,#43a047); color: #fff; }
-.pill-ok    { background: rgba(255,193,7,.2); color: #856404; }
-.pill-low   { background: rgba(244,67,54,.1); color: #c62828; }
+.score-pill { padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+.pill-great { background: var(--accent-soft); color: var(--accent); }
+.pill-ok    { background: rgba(210,153,34,.18); color: #e3b341; }
+.pill-low   { background: rgba(248,81,73,.13); color: #ff7b72; }
 
 /* Insight box */
 .insight-box {
-  padding: 20px 22px; border-radius: 14px;
-  background: linear-gradient(135deg,rgba(232,245,233,.9),rgba(241,248,233,.9));
-  border-left: 4px solid #4caf50; font-size: 15px; line-height: 1.8; color: #1a1a2e;
+  padding: 20px 22px; border-radius: 12px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-left: 3px solid var(--accent); font-size: 15px; line-height: 1.8; color: var(--text-muted);
 }
-.insight-box .hi  { color: #2e7d32; font-weight: 700; }
-.insight-box .lo  { color: #c62828; font-weight: 700; }
+.insight-box .hi  { color: var(--accent); font-weight: 700; }
+.insight-box .lo  { color: #ff7b72; font-weight: 700; }
 
 .empty-state { text-align:center; padding:48px 20px; color:var(--text-muted); }
 .empty-state .icon { font-size:44px; margin-bottom:14px; opacity:.5; }
@@ -295,6 +295,10 @@ const weekScores    = <?= json_encode(array_map(fn($v) => $v ?: null, $weekScore
 const uploadActivity= <?= json_encode($uploadActivity) ?>;
 
 // Score trend chart
+Chart.defaults.color = '#8b95a7';
+Chart.defaults.font.family = 'Inter, sans-serif';
+const GRID = 'rgba(255,255,255,.06)';
+
 new Chart(document.getElementById('scoreChart'), {
   type: 'line',
   data: {
@@ -302,9 +306,10 @@ new Chart(document.getElementById('scoreChart'), {
     datasets: [{
       label: 'Score (%)',
       data: weekScores,
-      borderColor: '#4caf50',
-      backgroundColor: 'rgba(76,175,80,0.12)',
-      pointBackgroundColor: '#2e7d32',
+      borderColor: '#3fb950',
+      backgroundColor: 'rgba(63,185,80,0.12)',
+      pointBackgroundColor: '#3fb950',
+      pointBorderColor: '#0a0e14',
       pointRadius: 5,
       tension: 0.4,
       fill: true,
@@ -317,7 +322,7 @@ new Chart(document.getElementById('scoreChart'), {
     scales: {
       y: { beginAtZero: true, min: 0, max: 100,
            ticks: { callback: v => v + '%' },
-           grid: { color: 'rgba(0,0,0,.04)' } },
+           grid: { color: GRID } },
       x: { grid: { display: false } }
     }
   }
@@ -331,7 +336,7 @@ new Chart(document.getElementById('uploadChart'), {
     datasets: [{
       label: 'PDFs Uploaded',
       data: uploadActivity,
-      backgroundColor: 'rgba(76,175,80,0.65)',
+      backgroundColor: 'rgba(63,185,80,0.7)',
       borderRadius: 8,
       borderSkipped: false
     }]
@@ -341,7 +346,7 @@ new Chart(document.getElementById('uploadChart'), {
     plugins: { legend: { display: false } },
     scales: {
       y: { beginAtZero: true, ticks: { precision: 0, stepSize: 1 },
-           grid: { color: 'rgba(0,0,0,.04)' } },
+           grid: { color: GRID } },
       x: { grid: { display: false } }
     }
   }

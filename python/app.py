@@ -233,6 +233,49 @@ def _extract_text(filepath: Path):
         doc.close()
 
 
+_TOPIC_STOP = {
+    "edition","fifth","fourth","third","second","first","chapter","section","figure",
+    "table","contents","index","preface","introduction","summary","references","among",
+    "these","those","there","their","which","while","about","using","based","given",
+    "however","therefore","university","press","copyright","reserved","rights","author",
+    "professor","january","february","march","april","august","september","october",
+    "november","december","monday","other","number","example","following","above","below",
+    "basic","bibliography","glossary","appendix","volume","part","unit","page","note","notes",
+    # common capitalised sentence-starters / function words
+    "that","this","with","when","from","each","they","then","there","what","where","while",
+    "also","such","here","your","have","will","would","could","should","into","more","than",
+    "some","most","many","both","only","even","still","much","very","well","like","just",
+    "make","made","used","over","after","before","because","between","through","since","during",
+    "every","then","they","them","then","being","does","done","each","then","when","then",
+    "however","thus","therefore","then","then","once","upon","when","whenever","whereas"
+}
+
+def _extract_topic_words(chunks: list, limit: int) -> list:
+    """
+    Extract meaningful topic terms from chunks, skipping junk.
+    Key heuristic: only keep terms that RECUR in the document — real concepts
+    repeat many times, whereas author names / cover-page words appear once.
+    """
+    full = " ".join(chunks)
+    candidates, seen = [], set()
+    for m in re.findall(r'\b[A-Z][a-zA-Z]{3,}(?:\s+[A-Z][a-zA-Z]{3,}){0,2}', full):
+        first = m.split()[0].lower()
+        key = m.lower()
+        if first in _TOPIC_STOP or key in seen:
+            continue
+        seen.add(key)
+        # Count case-insensitive occurrences of this term across the document
+        freq = len(re.findall(r'\b' + re.escape(m) + r'\b', full, re.IGNORECASE))
+        candidates.append((freq, m.strip()))
+
+    # Prefer the most frequently-recurring terms (real concepts), require freq >= 2
+    recurring = [t for f, t in sorted(candidates, key=lambda x: -x[0]) if f >= 2]
+    result = recurring[:limit]
+    if len(result) < limit:   # top up with single-occurrence terms if needed
+        result += [t for f, t in candidates if t not in result][:limit - len(result)]
+    return result[:limit]
+
+
 SUPPORTED_EXTS = (".pdf", ".docx")
 
 def _list_documents():
@@ -607,12 +650,12 @@ def _fallback_quiz(chunks: list, n=5) -> list:
         and re.sub(r'[^a-zA-Z]', '', w).lower() not in STOP
     ))[:300]
 
-    full_text = " ".join(chunks)
+    # Use only content-rich chunks (skips TOC / index / cover) for the fallback too
+    clean      = _quiz_chunks(chunks, k=12) or chunks
+    full_text  = " ".join(clean)
 
-    # Pass 1: try from content area (skip first 5 chunks = front matter)
-    start     = min(5, len(chunks) - 1)
-    content   = " ".join(chunks[start:])
-    questions = _make_questions_from_text(content, n, pool)
+    # Pass 1: definition-style questions from cleaned content
+    questions = _make_questions_from_text(full_text, n, pool)
 
     # Pass 2: if not enough, use the entire document text
     if len(questions) < n:
@@ -676,6 +719,11 @@ def _fallback_quiz(chunks: list, n=5) -> list:
     while len(questions) < n and idx < len(GENERIC):
         questions.append(GENERIC[idx])
         idx += 1
+
+    # Ensure every fallback question carries difficulty + explanation fields
+    for q in questions:
+        q.setdefault("difficulty", "medium")
+        q.setdefault("explanation", "")
 
     return questions[:n]
 
@@ -919,6 +967,42 @@ def ask_stream():
     return Response(generate(), mimetype="text/event-stream")
 
 
+def _is_garbage_chunk(text: str) -> bool:
+    """Detect table-of-contents / index / cover / reference-list chunks
+    that make terrible quiz material."""
+    tokens = text.split()
+    if len(tokens) < 25:
+        return True
+    # TOC/index pages are dense with page numbers
+    digit_tokens = sum(1 for t in tokens if any(c.isdigit() for c in t))
+    if digit_tokens / len(tokens) > 0.22:
+        return True
+    upper_head = text[:250].upper()
+    if any(k in upper_head for k in ("CONTENTS", "TABLE OF CONTENTS", "INDEX", "REFERENCES", "BIBLIOGRAPHY")):
+        return True
+    if text.count("....") > 2 or text.count(". . .") > 2:   # dot leaders
+        return True
+    # Needs real prose: at least a few sentence-ending periods
+    if text.count(". ") < 3:
+        return True
+    return False
+
+
+def _quiz_chunks(chunks: list, k: int = 8) -> list:
+    """Select content-rich chunks spread evenly across the whole document,
+    skipping front-matter and TOC/index garbage — for balanced coverage."""
+    # Skip obvious front matter (cover/title/copyright)
+    body = chunks[min(3, len(chunks) - 1):] if len(chunks) > 6 else chunks
+    good = [c for c in body if not _is_garbage_chunk(c)]
+    if len(good) < 2:
+        good = [c for c in chunks if not _is_garbage_chunk(c)] or chunks
+    if len(good) <= k:
+        return good
+    # Spread selection evenly across the document for balanced coverage
+    step = max(1, len(good) // k)
+    return good[::step][:k]
+
+
 @app.route("/generate-quiz", methods=["POST"])
 def generate_quiz():
     data          = request.get_json(silent=True) or {}
@@ -931,22 +1015,15 @@ def generate_quiz():
         return jsonify({"error": err, "questions": []})
 
     chunks  = per_file_data[filename]["chunks"]
-    # Build context: for small docs use everything; for large docs sample evenly
-    skip = min(5, len(chunks) - 1)
-    body = chunks[skip:] or chunks          # skip title/copyright pages
-    if len(body) <= 8:
-        # Small document — use all available text
-        sampled = body
-    else:
-        step    = max(1, len(body) // 10)
-        sampled = body[::step][:10]
-    context = "\n---\n".join(sampled)
+    # Select content-rich chunks spread across the document (skips TOC/index/cover)
+    sampled = _quiz_chunks(chunks, k=8)
+    context = "\n\n---\n\n".join(sampled)
 
-    # Check quiz cache first (avoid re-generating for same PDF)
-    quiz_cache_path = CACHE_DIR / (hashlib.md5(filename.encode()).hexdigest() + f"_quiz_{num_questions}.json")
+    # Cache (v2 key busts old low-quality cached quizzes)
+    quiz_cache_path = CACHE_DIR / (hashlib.md5(filename.encode()).hexdigest() + f"_quizv2_{num_questions}.json")
     if quiz_cache_path.exists():
         try:
-            with open(quiz_cache_path) as f:
+            with open(quiz_cache_path, encoding="utf-8") as f:
                 cached_quiz = json.load(f)
             if cached_quiz.get("questions"):
                 print(f"[QUIZ] ✅ Loaded {len(cached_quiz['questions'])} questions from cache")
@@ -958,51 +1035,66 @@ def generate_quiz():
         fb = _fallback_quiz(chunks, num_questions)
         return jsonify({"status":"ok","questions":fb,"mode":"fallback"})
 
-    # Keep context small — use 4 chunks max to stay well under token limits
+    # Concept-focused, education-grade prompt with explanations + difficulty mix
     prompt = (
-        f"Generate exactly {num_questions} multiple choice questions "
-        f"from this academic text.\n"
-        "Each question must:\n"
-        "- Test understanding of a specific concept\n"
-        "- Have exactly 4 answer options (strings, no letter prefixes)\n"
-        "- Have one clearly correct answer\n\n"
-        "Return ONLY valid JSON array, nothing else:\n"
-        '[{"question":"...","options":["opt1","opt2","opt3","opt4"],"answer":0}]\n\n'
-        f"Text:\n{chr(10).join(sampled[:4])}"
+        f"You are an expert exam author. Create exactly {num_questions} high-quality "
+        "multiple-choice questions that test genuine understanding of the KEY CONCEPTS "
+        "in the document content below.\n\n"
+        "STRICT REQUIREMENTS:\n"
+        "1. Test comprehension, application, and analysis — NOT trivial recall or fill-in-the-blank\n"
+        "2. Use a MIX of question types: conceptual, definition, application, scenario-based, "
+        "cause-and-effect, and comparison (where the content allows)\n"
+        "3. Include a MIX of difficulty levels: some easy, some medium, some hard\n"
+        "4. Each question covers a DIFFERENT topic/section — never repeat the same point\n"
+        "5. Each question has exactly 4 options. ALL distractors must be plausible and "
+        "believable (no obviously wrong joke options). Only ONE option is correct.\n"
+        "6. Questions must be grammatically correct, clear, and unambiguous\n"
+        "7. NEVER copy a sentence verbatim and NEVER reference 'the text/document/passage/page'\n"
+        "8. For each question include a 1-2 sentence explanation of WHY the answer is correct\n\n"
+        "Return ONLY a valid JSON array (no extra text):\n"
+        '[{"question":"...","options":["opt1","opt2","opt3","opt4"],"answer":0,'
+        '"difficulty":"easy","explanation":"..."}]\n\n'
+        f"Document content:\n{context}"
     )
 
-    # Try fast model first (smaller quota usage), fall back to main model
-    for model in [GROQ_MODEL_FAST, GROQ_MODEL]:
+    # Quality-first: try the large model first, fall back to the fast model on rate-limit
+    for model in [GROQ_MODEL, GROQ_MODEL_FAST]:
         try:
             resp   = groq_client.chat.completions.create(
                 model=model, messages=[{"role":"user","content":prompt}],
-                temperature=0.5, max_tokens=1800
+                temperature=0.6, max_tokens=3000
             )
             raw    = resp.choices[0].message.content.strip()
             parsed = _parse_json_response(raw)
             if parsed and isinstance(parsed, list):
-                valid = [q for q in parsed
-                         if isinstance(q, dict)
-                         and isinstance(q.get("question"), str)
-                         and isinstance(q.get("options"), list)
-                         and len(q.get("options")) == 4
-                         and isinstance(q.get("answer"), int)
-                         and 0 <= q.get("answer") <= 3]
+                valid = []
+                for q in parsed:
+                    if (isinstance(q, dict)
+                            and isinstance(q.get("question"), str)
+                            and isinstance(q.get("options"), list)
+                            and len(q.get("options")) == 4
+                            and isinstance(q.get("answer"), int)
+                            and 0 <= q.get("answer") <= 3):
+                        # Normalise optional fields
+                        q["difficulty"]  = str(q.get("difficulty", "medium")).lower()
+                        if q["difficulty"] not in ("easy", "medium", "hard"):
+                            q["difficulty"] = "medium"
+                        q["explanation"] = str(q.get("explanation", "")).strip()
+                        valid.append(q)
                 if valid:
                     result = {"status":"ok","questions":valid[:num_questions],"model":model}
-                    print(f"[QUIZ] ✅ {len(valid)} questions via {model}")
-                    # Cache the result
+                    print(f"[QUIZ] ✅ {len(valid)} concept questions via {model}")
                     try:
-                        with open(quiz_cache_path,"w") as f:
+                        with open(quiz_cache_path, "w", encoding="utf-8") as f:
                             json.dump(result, f)
                     except: pass
                     return jsonify(result)
-            print(f"[QUIZ] ⚠️ Parse failed with {model}, trying next")
+            print(f"[QUIZ] ⚠️ Parse/validate failed with {model}, trying next")
         except Exception as e:
             print(f"[QUIZ] {model} error: {e}")
-            if "rate_limit" in str(e).lower() and model == GROQ_MODEL_FAST:
-                continue   # try main model
-            break          # other error — don't retry
+            if "rate_limit" in str(e).lower():
+                continue   # try the other model
+            break
 
     fb = _fallback_quiz(chunks, num_questions)
     return jsonify({"status":"ok","questions":fb,"mode":"fallback"})
@@ -1079,6 +1171,157 @@ def summarize():
         "chunks":len(chunks),
         "mode":"fallback"
     })
+
+
+@app.route("/study-plan", methods=["POST"])
+def study_plan():
+    """Generate a day-by-day study schedule from the document."""
+    data     = request.get_json(silent=True) or {}
+    filename = os.path.basename(data.get("filename", "")).strip()
+    days     = max(1, min(int(data.get("days", 5)), 30))
+    hours    = data.get("hours_per_day", 2)
+    print(f"\n[STUDY-PLAN] '{filename}' over {days} days")
+
+    ok, err = _ensure_indexed(filename)
+    if not ok:
+        return jsonify({"error": err})
+
+    chunks  = per_file_data[filename]["chunks"]
+    sampled = _quiz_chunks(chunks, k=10)
+    context = "\n\n---\n\n".join(sampled)
+
+    # Cache
+    cache_path = CACHE_DIR / (hashlib.md5(filename.encode()).hexdigest() + f"_plan_{days}.json")
+    if cache_path.exists():
+        try:
+            with open(cache_path, encoding="utf-8") as f:
+                cached = json.load(f)
+            if cached.get("days"):
+                print("[STUDY-PLAN] ✅ from cache")
+                return jsonify(cached)
+        except: pass
+
+    if groq_client:
+        prompt = (
+            f"You are an expert study coach. A student has {days} days to study the document "
+            f"below (about {hours} hours/day available). Create a realistic, motivating day-by-day study plan.\n\n"
+            "Rules:\n"
+            "- Distribute the document's key topics evenly across the days (don't cram everything on day 1)\n"
+            "- Build from fundamentals → advanced as days progress\n"
+            "- The final day must be revision + a full self-test\n"
+            "- For each day give: a short title, 2-4 topics to cover, a one-line focus, "
+            "2-3 concrete activities, and a checkpoint (what to quiz/test yourself on)\n\n"
+            "Return ONLY this JSON (no extra text):\n"
+            '{"days":[{"day":1,"title":"...","topics":["..."],"focus":"...",'
+            '"activities":["..."],"checkpoint":"..."}],"tips":["...","..."]}\n\n'
+            f"Document content:\n{context}"
+        )
+        for model in [GROQ_MODEL, GROQ_MODEL_FAST]:
+            try:
+                resp   = groq_client.chat.completions.create(
+                    model=model, messages=[{"role": "user", "content": prompt}],
+                    temperature=0.5, max_tokens=3000)
+                parsed = _parse_json_response(resp.choices[0].message.content.strip())
+                if isinstance(parsed, dict) and isinstance(parsed.get("days"), list) and parsed["days"]:
+                    result = {"status": "ok", "days": parsed["days"][:days],
+                              "tips": parsed.get("tips", []), "total_days": days}
+                    try:
+                        with open(cache_path, "w", encoding="utf-8") as f: json.dump(result, f)
+                    except: pass
+                    print(f"[STUDY-PLAN] ✅ via {model}")
+                    return jsonify(result)
+            except Exception as e:
+                print(f"[STUDY-PLAN] {model} error: {e}")
+                if "rate_limit" in str(e).lower(): continue
+                break
+
+    # Fallback — split topics across days
+    topics = _extract_topic_words(sampled, days * 3)
+    per = max(1, len(topics) // days) if topics else 1
+    plan_days = []
+    for d in range(days):
+        slice_ = topics[d*per:(d+1)*per] or ["Review previous material"]
+        plan_days.append({
+            "day": d + 1,
+            "title": "Revision & Self-Test" if d == days - 1 else f"Study Session {d+1}",
+            "topics": slice_,
+            "focus": "Final revision and full practice quiz" if d == days - 1 else "Read, understand, and take notes",
+            "activities": ["Read the relevant sections", "Summarise in your own words", "Take a practice quiz"],
+            "checkpoint": "Full quiz on all topics" if d == days - 1 else f"Quiz yourself on: {', '.join(slice_[:2])}"
+        })
+    return jsonify({"status": "ok", "days": plan_days,
+                    "tips": ["Study in focused 25-minute blocks (Pomodoro).",
+                             "Review the previous day's topics before starting new ones.",
+                             "Use the Chatbot to clarify anything confusing."],
+                    "total_days": days, "mode": "fallback"})
+
+
+@app.route("/concept-map", methods=["POST"])
+def concept_map():
+    """Build a concept graph (nodes + relationships) from the document."""
+    data     = request.get_json(silent=True) or {}
+    filename = os.path.basename(data.get("filename", "")).strip()
+    print(f"\n[CONCEPT-MAP] '{filename}'")
+
+    ok, err = _ensure_indexed(filename)
+    if not ok:
+        return jsonify({"error": err})
+
+    chunks  = per_file_data[filename]["chunks"]
+    sampled = _quiz_chunks(chunks, k=10)
+    context = "\n\n---\n\n".join(sampled)
+
+    cache_path = CACHE_DIR / (hashlib.md5(filename.encode()).hexdigest() + "_cmap.json")
+    if cache_path.exists():
+        try:
+            with open(cache_path, encoding="utf-8") as f:
+                cached = json.load(f)
+            if cached.get("nodes"):
+                print("[CONCEPT-MAP] ✅ from cache")
+                return jsonify(cached)
+        except: pass
+
+    if groq_client:
+        prompt = (
+            "Analyse the document content below and build a CONCEPT MAP showing how the main "
+            "topics relate to each other.\n\n"
+            "Rules:\n"
+            "- Identify 8-14 key concepts (nodes)\n"
+            "- Connect related concepts with labelled relationships (edges)\n"
+            "- Each edge label is a short phrase describing the relationship (e.g. 'is part of', "
+            "'uses', 'leads to', 'type of')\n"
+            "- Assign each node a 'group' (a broad category it belongs to)\n\n"
+            "Return ONLY this JSON (no extra text):\n"
+            '{"nodes":[{"id":"Concept Name","group":"Category"}],'
+            '"edges":[{"from":"Concept A","to":"Concept B","label":"relationship"}]}\n\n'
+            f"Document content:\n{context}"
+        )
+        for model in [GROQ_MODEL, GROQ_MODEL_FAST]:
+            try:
+                resp   = groq_client.chat.completions.create(
+                    model=model, messages=[{"role": "user", "content": prompt}],
+                    temperature=0.4, max_tokens=2500)
+                parsed = _parse_json_response(resp.choices[0].message.content.strip())
+                if (isinstance(parsed, dict) and isinstance(parsed.get("nodes"), list)
+                        and len(parsed["nodes"]) >= 3):
+                    result = {"status": "ok",
+                              "nodes": parsed["nodes"][:18],
+                              "edges": parsed.get("edges", [])}
+                    try:
+                        with open(cache_path, "w", encoding="utf-8") as f: json.dump(result, f)
+                    except: pass
+                    print(f"[CONCEPT-MAP] ✅ via {model} ({len(result['nodes'])} nodes)")
+                    return jsonify(result)
+            except Exception as e:
+                print(f"[CONCEPT-MAP] {model} error: {e}")
+                if "rate_limit" in str(e).lower(): continue
+                break
+
+    # Fallback — star graph: central doc node linked to extracted topics
+    topics = _extract_topic_words(sampled, 10)
+    nodes = [{"id": "Document", "group": "Root"}] + [{"id": t, "group": "Topic"} for t in topics]
+    edges = [{"from": "Document", "to": t, "label": "covers"} for t in topics]
+    return jsonify({"status": "ok", "nodes": nodes, "edges": edges, "mode": "fallback"})
 
 
 @app.route("/reindex-all", methods=["POST"])

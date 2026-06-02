@@ -19,12 +19,12 @@ $pdf_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
   margin-bottom: 10px; font-size: 13px; font-weight: 600; color: var(--text-muted);
 }
 .progress-track {
-  height: 7px; background: rgba(0,0,0,.07); border-radius: 10px;
+  height: 7px; background: var(--surface-3); border-radius: 10px;
   overflow: hidden; margin-bottom: 22px;
 }
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #2e7d32, #00e676);
+  background: linear-gradient(90deg, var(--accent), var(--accent-bright));
   border-radius: 10px;
   transition: width .6s cubic-bezier(.4,0,.2,1);
   width: 0%;
@@ -40,25 +40,24 @@ $pdf_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 .options { list-style: none; display: flex; flex-direction: column; gap: 12px; }
 
 .opt {
-  padding: 16px 20px;
-  border: 2px solid rgba(0,0,0,.09);
-  border-radius: 14px;
+  padding: 15px 18px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
   cursor: pointer;
-  font-size: 15px; font-weight: 500;
+  font-size: 15px; font-weight: 500; color: var(--text);
   display: flex; align-items: center; gap: 14px;
-  transition: all .2s;
-  background: rgba(255,255,255,.6);
-  backdrop-filter: blur(4px);
+  transition: all .18s;
+  background: var(--surface-2);
   user-select: none;
 }
-.opt:hover { border-color: #4caf50; background: rgba(76,175,80,.06); transform: translateX(4px); }
-.opt.selected { border-color: #4caf50; background: rgba(76,175,80,.1); }
+.opt:hover { border-color: var(--accent-line); background: var(--surface-3); }
+.opt.selected { border-color: var(--accent); background: var(--accent-soft); }
 .opt.correct  {
-  border-color: #2e7d32; background: rgba(76,175,80,.15);
+  border-color: var(--accent); background: var(--accent-soft);
   animation: correctBounce .4s ease;
 }
 .opt.wrong    {
-  border-color: #e53935; background: rgba(244,67,54,.08);
+  border-color: var(--danger); background: rgba(248,81,73,.1);
   animation: wrongShake .4s ease;
 }
 @keyframes correctBounce { 0%,100%{transform:scale(1)} 50%{transform:scale(1.02)} }
@@ -66,32 +65,32 @@ $pdf_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 .opt-letter {
   width: 30px; height: 30px; flex-shrink: 0;
-  border-radius: 50%; background: rgba(0,0,0,.06);
+  border-radius: 50%; background: var(--surface-3); color: var(--text-muted);
   display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 800; transition: .2s;
+  font-size: 13px; font-weight: 700; transition: .2s;
 }
 .opt.selected .opt-letter,
-.opt.correct  .opt-letter { background: #4caf50; color: #fff; }
-.opt.wrong    .opt-letter { background: #e53935; color: #fff; }
+.opt.correct  .opt-letter { background: var(--accent); color: #06140a; }
+.opt.wrong    .opt-letter { background: var(--danger); color: #fff; }
 
 /* Feedback */
 .feedback {
   margin-top: 18px; padding: 14px 18px;
-  border-radius: 12px; font-size: 15px; font-weight: 700;
+  border-radius: 12px; font-size: 15px; font-weight: 600;
   display: none; animation: fadeIn .3s ease;
 }
-.feedback.correct { background: rgba(76,175,80,.12); color: #2e7d32; border: 1px solid rgba(76,175,80,.25); }
-.feedback.wrong   { background: rgba(244,67,54,.08); color: #c62828; border: 1px solid rgba(244,67,54,.18); }
+.feedback.correct { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent-line); }
+.feedback.wrong   { background: rgba(248,81,73,.1); color: #ff7b72; border: 1px solid rgba(248,81,73,.3); }
 
 /* Submit */
 .submit-wrap { margin-top: 22px; }
-.sg-btn { width: 100%; padding: 14px; font-size: 16px; border-radius: 14px; }
+.sg-btn { width: 100%; padding: 14px; font-size: 15px; border-radius: 12px; }
 
 /* Error */
 .err-box {
-  display: none; padding: 22px; border-radius: 16px;
-  background: rgba(244,67,54,.07); border: 1px solid rgba(244,67,54,.2);
-  color: #c62828; text-align: center;
+  display: none; padding: 22px; border-radius: 14px;
+  background: rgba(248,81,73,.08); border: 1px solid rgba(248,81,73,.25);
+  color: #ff7b72; text-align: center;
 }
 .err-box p { margin-bottom: 14px; font-size: 15px; }
 
@@ -103,25 +102,25 @@ $pdf_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 .final-wrap { text-align: center; padding: 10px 0; }
 .score-circle {
   width: 140px; height: 140px; border-radius: 50%;
-  background: linear-gradient(135deg, #1b5e20, #43a047);
-  color: #fff; display: flex; flex-direction: column;
+  background: linear-gradient(135deg, var(--accent), var(--accent-bright));
+  color: #06140a; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   margin: 24px auto;
-  box-shadow: 0 12px 40px rgba(46,125,50,.35);
+  box-shadow: 0 0 50px rgba(63,185,80,.4);
   animation: popIn .5s cubic-bezier(.34,1.56,.64,1) both;
 }
 @keyframes popIn { from { transform: scale(.5); opacity: 0; } }
 .score-circle .pct { font-size: 38px; font-weight: 900; }
-.score-circle .lbl { font-size: 13px; opacity: .8; }
+.score-circle .lbl { font-size: 13px; opacity: .75; }
 
-.final-msg { font-size: 18px; font-weight: 700; color: var(--g2); margin-bottom: 8px; }
+.final-msg { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
 .final-sub { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
 
 .countdown-chip {
   display: inline-block;
   padding: 10px 22px;
-  background: rgba(76,175,80,.1); border: 1px solid rgba(76,175,80,.2);
-  border-radius: 30px; font-size: 14px; font-weight: 600; color: var(--g2);
+  background: var(--accent-soft); border: 1px solid var(--accent-line);
+  border-radius: 30px; font-size: 14px; font-weight: 600; color: var(--accent);
 }
 
 .loading-state { text-align: center; padding: 40px 0; color: var(--text-muted); }
@@ -203,10 +202,20 @@ function setProgress(n) {
   document.getElementById("scoreTracker").textContent = `Score: ${score}`;
 }
 
+const DIFF_COLORS = {
+  easy:   "background:rgba(63,185,80,.16);color:#3fb950;",
+  medium: "background:rgba(210,153,34,.18);color:#e3b341;",
+  hard:   "background:rgba(248,81,73,.15);color:#ff7b72;"
+};
+
 function renderQ() {
   setProgress(cur);
   const q = quiz[cur];
-  document.getElementById("qText").textContent = (cur + 1) + ". " + q.question;
+  const diff = (q.difficulty || "medium").toLowerCase();
+  const badge = `<span style="${DIFF_COLORS[diff]||DIFF_COLORS.medium};
+       font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;
+       text-transform:uppercase;letter-spacing:.5px;margin-left:8px;vertical-align:middle;">${diff}</span>`;
+  document.getElementById("qText").innerHTML = (cur + 1) + ". " + escHtml(q.question) + badge;
 
   const LETTERS = ["A","B","C","D"];
   document.getElementById("optList").innerHTML = q.options.map((opt, i) => `
@@ -246,14 +255,23 @@ function submitAnswer() {
   });
 
   const fb = document.getElementById("feedback");
+  const expl = (quiz[cur].explanation || "").trim();
+  const explBlock = expl
+    ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);
+         font-weight:400;font-size:13.5px;line-height:1.6;color:var(--text-muted);">
+         <strong style="color:var(--accent);">Explanation:</strong> ${escHtml(expl)}
+       </div>`
+    : "";
+
   if (chosen === correct) {
     score++;
     fb.className = "feedback correct";
-    fb.textContent = "✅ Correct!";
+    fb.innerHTML = "✅ <strong>Correct!</strong>" + explBlock;
     showToast("Correct! +1 point", "success");
   } else {
     fb.className = "feedback wrong";
-    fb.textContent = "❌ Incorrect. Answer: " + escHtml(quiz[cur].options[correct]);
+    fb.innerHTML = "❌ <strong>Incorrect.</strong> Correct answer: <strong>"
+                 + escHtml(quiz[cur].options[correct]) + "</strong>" + explBlock;
     showToast("Incorrect.", "error");
   }
   fb.style.display = "block";
