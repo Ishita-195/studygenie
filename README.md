@@ -1,4 +1,4 @@
-# 🧞 StudyGenie — AI-Powered Document Learning Platform
+# StudyGenie — AI-Powered Document Learning Platform
 
 StudyGenie turns any PDF or Word document into an interactive learning experience. Upload your study material and instantly get **AI-generated summaries**, a **document-aware chatbot**, and **auto-generated quizzes** — all grounded in the actual content of your document.
 
@@ -8,16 +8,16 @@ Built on a **Retrieval-Augmented Generation (RAG)** pipeline with **semantic sea
 
 ---
 
-## ✨ Features
+## Features
 
 | Feature | Description |
 |---------|-------------|
-| 📄 **Smart Document Extraction** | Extracts text from text-based PDFs, scanned PDFs (via OCR), and Word `.docx` files |
-| 💬 **Document-Aware Chatbot** | Ask questions in natural language; get accurate, structured answers grounded in your document — with conversation memory for follow-ups |
-| ✨ **AI Summaries** | Instant academic summary with key topics and difficulty rating |
-| 🧪 **Auto-Generated Quizzes** | 5 multiple-choice questions generated from any document, with instant scoring |
-| 📊 **Analytics Dashboard** | Track quiz scores, performance trends, and per-document progress with charts |
-| 🔐 **Secure Auth** | Bcrypt-hashed passwords, prepared statements, session management |
+| **Smart Document Extraction** | Extracts text from text-based PDFs, scanned PDFs (via OCR), and Word `.docx` files |
+| **Document-Aware Chatbot** | Ask questions in natural language; get accurate, structured answers grounded in your document — with conversation memory for follow-ups |
+| **AI Summaries** | Instant academic summary with key topics and difficulty rating |
+| **Auto-Generated Quizzes** | 5 multiple-choice questions generated from any document, with instant scoring |
+| **Analytics Dashboard** | Track quiz scores, performance trends, and per-document progress with charts |
+| **Secure Auth** | Bcrypt-hashed passwords, prepared statements, session management |
 
 ---
 
