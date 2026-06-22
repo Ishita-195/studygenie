@@ -105,7 +105,7 @@ Register an account, upload a document, and start learning! 🎉
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 studygenie/
@@ -128,7 +128,7 @@ studygenie/
 
 ---
 
-## 🔒 Security
+## Security
 
 - Passwords hashed with **bcrypt** (`password_hash`)
 - All database queries use **prepared statements** (SQL-injection safe)
@@ -137,7 +137,7 @@ studygenie/
 
 ---
 
-## 📜 License
+## License
 
 This project is for educational and portfolio purposes.
 
