@@ -63,8 +63,16 @@ if [ "$DB_HOST" = "127.0.0.1" ] || [ "$DB_HOST" = "localhost" ]; then
         sleep 1
     done
 
+    # Create the DB and allow root to connect over TCP (PHP uses 127.0.0.1, which
+    # MariaDB treats as a different host from the default root@localhost socket
+    # account -> otherwise "Host '127.0.0.1' is not allowed" / error 1130).
     mysql -u root <<SQL
 CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+CREATE USER IF NOT EXISTS '${DB_USER}'@'127.0.0.1' IDENTIFIED BY '${DB_PASS}';
+CREATE USER IF NOT EXISTS '${DB_USER}'@'%'         IDENTIFIED BY '${DB_PASS}';
+GRANT ALL PRIVILEGES ON *.* TO '${DB_USER}'@'127.0.0.1' WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON *.* TO '${DB_USER}'@'%'         WITH GRANT OPTION;
+FLUSH PRIVILEGES;
 SQL
 
     # Seed schema only if the 'users' table is absent (idempotent across restarts
