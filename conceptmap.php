@@ -29,8 +29,13 @@ $safe_name = htmlspecialchars(clean_name($row['file_name']));
 .map-head p { font-size:13px; color:var(--text-muted); margin-top:2px; }
 
 .graph-card { padding:0; overflow:hidden; }
-#graph { width:100%; height:600px; background:
-  radial-gradient(700px 400px at 30% 20%, rgba(63,185,80,.05), transparent 60%); }
+#graph {
+  width:100%; height:620px;
+  background:
+    radial-gradient(900px 500px at 50% 40%, rgba(63,185,80,.06), transparent 60%),
+    radial-gradient(circle at center, rgba(255,255,255,.025) 1px, transparent 1px) 0 0 / 26px 26px,
+    #0b0f17;
+}
 
 .legend { display:flex; flex-wrap:wrap; gap:10px; padding:14px 20px; border-top:1px solid var(--border); }
 .legend-item { display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--text-muted); }
@@ -57,10 +62,7 @@ $safe_name = htmlspecialchars(clean_name($row['file_name']));
   </div>
 
   <div class="map-head">
-    <div>
-      <h2>🧩 Concept Map</h2>
-      <p>How the key ideas in <strong style="color:var(--text)"><?= $safe_name ?></strong> connect. Drag nodes · scroll to zoom.</p>
-    </div>
+    <p>How the key ideas in <strong style="color:var(--text)"><?= $safe_name ?></strong> connect &nbsp;·&nbsp; click a concept to focus &nbsp;·&nbsp; drag &amp; scroll to explore</p>
     <button class="sg-btn sg-btn-ghost" onclick="loadMap()">↻ Regenerate</button>
   </div>
 
@@ -99,49 +101,113 @@ function showErr(msg) {
     `<div class="map-error">⚠️ ${msg.replace(/</g,'&lt;')}</div>`;
 }
 
+function hexToRgba(hex, a) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+}
+
 function renderGraph(data) {
   const host = document.getElementById('graphHost');
   host.innerHTML = '<div id="graph"></div>';
 
-  // Map groups → colors
   const groups = [...new Set(data.nodes.map(n => n.group || 'Concept'))];
   const colorOf = g => PALETTE[groups.indexOf(g) % PALETTE.length];
 
-  const nodes = data.nodes.map((n, i) => ({
-    id: n.id,
-    label: n.id,
-    group: n.group || 'Concept',
-    color: { background: colorOf(n.group || 'Concept'), border: 'rgba(255,255,255,.25)',
-             highlight: { background: colorOf(n.group || 'Concept'), border: '#fff' } },
-    font: { color: '#0a0e14', face: 'Inter', size: 15, strokeWidth: 0 },
-    shape: 'dot',
-    size: 18,
-    borderWidth: 2
-  }));
+  // Degree centrality → bigger, brighter nodes for more-connected concepts
+  const degree = {};
+  data.nodes.forEach(n => degree[n.id] = 0);
+  (data.edges || []).forEach(e => { degree[e.from] = (degree[e.from]||0)+1; degree[e.to] = (degree[e.to]||0)+1; });
+  const maxDeg = Math.max(1, ...Object.values(degree));
+
+  const nodes = data.nodes.map(n => {
+    const g    = n.group || 'Concept';
+    const base = colorOf(g);
+    const deg  = degree[n.id] || 0;
+    const size = 14 + (deg / maxDeg) * 26;          // 14 → 40 by importance
+    return {
+      id: n.id,
+      label: n.id,
+      group: g,
+      title: `${n.id}  ·  ${g}  ·  ${deg} connection${deg===1?'':'s'}`,
+      value: deg + 1,
+      size: size,
+      shape: 'dot',
+      borderWidth: 2,
+      color: {
+        background: base,
+        border: hexToRgba(base, .35),
+        highlight: { background: base, border: '#ffffff' },
+        hover:     { background: base, border: '#ffffff' }
+      },
+      shadow: { enabled: true, color: hexToRgba(base, .55), size: 18 + (deg/maxDeg)*22, x: 0, y: 0 },
+      font: {
+        color: '#e7edf4', face: 'Inter',
+        size: 13 + (deg / maxDeg) * 6, strokeWidth: 4, strokeColor: '#070b12',
+        vadjust: -2, multi: false
+      }
+    };
+  });
 
   const edges = (data.edges || []).map(e => ({
     from: e.from, to: e.to, label: e.label || '',
-    font: { color: '#8b95a7', size: 11, face: 'Inter', strokeWidth: 4, strokeColor: '#0a0e14' },
-    color: { color: 'rgba(255,255,255,.18)', highlight: '#3fb950' },
-    arrows: { to: { enabled: true, scaleFactor: 0.5 } },
-    smooth: { type: 'continuous' }
+    font: { color: 'rgba(139,149,167,.5)', size: 9.5, face: 'Inter', strokeWidth: 3, strokeColor: '#070b12', align: 'horizontal' },
+    color: { color: 'rgba(255,255,255,.1)', highlight: '#3fb950', hover: '#3fb950', opacity: 1 },
+    width: 1, selectionWidth: 2.5,
+    arrows: { to: { enabled: true, scaleFactor: 0.4, type: 'arrow' } },
+    smooth: { type: 'continuous', roundness: 0.15 }
   }));
 
+  const nodesDS = new vis.DataSet(nodes);
+  const edgesDS = new vis.DataSet(edges);
+
   const network = new vis.Network(document.getElementById('graph'),
-    { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) },
+    { nodes: nodesDS, edges: edgesDS },
     {
-      physics: { stabilization: true, barnesHut: { gravitationalConstant: -8000, springLength: 150 } },
-      interaction: { hover: true, tooltipDelay: 120 },
-      nodes: { scaling: { min: 14, max: 30 } }
+      physics: {
+        solver: 'forceAtlas2Based',
+        forceAtlas2Based: { gravitationalConstant: -110, centralGravity: 0.008, springLength: 210, springConstant: 0.08, damping: 0.6, avoidOverlap: 0.6 },
+        stabilization: { iterations: 280 },
+        timestep: 0.4
+      },
+      interaction: { hover: true, tooltipDelay: 120, navigationButtons: false, keyboard: false },
+      nodes: { scaling: { min: 14, max: 42 } }
     }
   );
+
+  // Centre & zoom the whole graph nicely once it settles
+  network.once('stabilizationIterationsDone', () => network.fit({ animation: { duration: 600 } }));
+
+  // ── Click a node → spotlight its neighbourhood, dim the rest ──
+  const allNodeIds = nodes.map(n => n.id);
+  function spotlight(centerId) {
+    const connected = new Set([centerId]);
+    edgesDS.forEach(e => { if (e.from === centerId) connected.add(e.to); if (e.to === centerId) connected.add(e.from); });
+    nodesDS.update(nodes.map(n => {
+      const on = connected.has(n.id);
+      return { id: n.id, opacity: on ? 1 : 0.18,
+               font: { color: on ? '#e7edf4' : 'rgba(231,237,244,.25)', face:'Inter',
+                       size: n.font.size, strokeWidth: 4, strokeColor: '#070b12' } };
+    }));
+    edgesDS.update(edges.map(e => {
+      const on = e.from === centerId || e.to === centerId;
+      return { id: e.id, color: { color: on ? '#3fb950' : 'rgba(255,255,255,.04)' },
+               font: { color: on ? '#9aa6b8' : 'rgba(125,135,153,.15)', size:10.5, strokeWidth:4, strokeColor:'#070b12' } };
+    }));
+  }
+  function resetSpotlight() {
+    nodesDS.update(nodes.map(n => ({ id: n.id, opacity: 1, font: n.font })));
+    edgesDS.update(edges.map(e => ({ id: e.id, color: e.color, font: e.font })));
+  }
+  network.on('selectNode', p => spotlight(p.nodes[0]));
+  network.on('deselectNode', resetSpotlight);
+  network.on('click', p => { if (!p.nodes.length) resetSpotlight(); });
 
   // Legend
   const legend = document.getElementById('legend');
   legend.style.display = 'flex';
-  legend.innerHTML = groups.map(g =>
-    `<span class="legend-item"><span class="legend-dot" style="background:${colorOf(g)}"></span>${g.replace(/</g,'&lt;')}</span>`
-  ).join('');
+  legend.innerHTML =
+    `<span class="legend-item" style="color:var(--text-dim)">${data.nodes.length} concepts · ${(data.edges||[]).length} links · click a node to focus</span>` +
+    groups.map(g => `<span class="legend-item"><span class="legend-dot" style="background:${colorOf(g)}"></span>${g.replace(/</g,'&lt;')}</span>`).join('');
 }
 
 loadMap();

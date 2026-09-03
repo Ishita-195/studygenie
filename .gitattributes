@@ -1,0 +1,8 @@
+# These run inside the Linux deploy container — they MUST stay LF, never CRLF,
+# regardless of core.autocrlf on Windows checkouts.
+*.sh            text eol=lf
+docker/*        text eol=lf
+Dockerfile      text eol=lf
+.dockerignore   text eol=lf
+*.cnf           text eol=lf
+*.conf          text eol=lf

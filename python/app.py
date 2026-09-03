@@ -250,6 +250,40 @@ _TOPIC_STOP = {
     "however","thus","therefore","then","then","once","upon","when","whenever","whereas"
 }
 
+def _important_terms(filename: str, top_n: int = 20) -> list:
+    """
+    Return the document's most important terms, scored by TF-IDF weight.
+    These are the terms that genuinely characterise THIS document
+    (not just frequent words) — used to anchor the concept map.
+    """
+    data = per_file_data.get(filename)
+    if not data:
+        return []
+    try:
+        vec   = data["vectorizer"]
+        mat   = data["matrix"]
+        names = vec.get_feature_names_out()
+        scores = mat.sum(axis=0).A1                      # total TF-IDF per term
+        ranked = sorted(zip(scores, names), key=lambda x: -x[0])
+        out, seen = [], set()
+        for _, term in ranked:
+            t = term.strip()
+            # keep multi-word phrases and meaningful single words; drop junk
+            words = t.split()
+            if any(w in _TOPIC_STOP for w in words):
+                continue
+            if len(t) < 4 or t in seen or t.isdigit():
+                continue
+            seen.add(t)
+            out.append(t.title())
+            if len(out) >= top_n:
+                break
+        return out
+    except Exception as e:
+        print(f"[IMPORTANT-TERMS] {e}")
+        return []
+
+
 def _extract_topic_words(chunks: list, limit: int) -> list:
     """
     Extract meaningful topic terms from chunks, skipping junk.
@@ -1268,10 +1302,15 @@ def concept_map():
         return jsonify({"error": err})
 
     chunks  = per_file_data[filename]["chunks"]
-    sampled = _quiz_chunks(chunks, k=10)
+    sampled = _quiz_chunks(chunks, k=12)
     context = "\n\n---\n\n".join(sampled)
 
-    cache_path = CACHE_DIR / (hashlib.md5(filename.encode()).hexdigest() + "_cmap.json")
+    # Document's most important terms (TF-IDF) — used to anchor the map on
+    # what actually matters in THIS document.
+    key_terms = _important_terms(filename, top_n=20)
+    terms_hint = ", ".join(key_terms) if key_terms else ""
+
+    cache_path = CACHE_DIR / (hashlib.md5(filename.encode()).hexdigest() + "_cmap2.json")
     if cache_path.exists():
         try:
             with open(cache_path, encoding="utf-8") as f:
@@ -1283,15 +1322,23 @@ def concept_map():
 
     if groq_client:
         prompt = (
-            "Analyse the document content below and build a CONCEPT MAP showing how the main "
-            "topics relate to each other.\n\n"
+            "Build a CONCEPT MAP of the MOST IMPORTANT topics in this document and how they "
+            "relate to each other. The map should help a student see the document's key ideas "
+            "at a glance.\n\n"
             "Rules:\n"
-            "- Identify 8-14 key concepts (nodes)\n"
+            "- Focus ONLY on the important, central topics a student must understand — "
+            "ignore minor details, examples, author names, and page furniture\n"
+            "- Identify 8-14 key concepts (nodes), prioritising the most significant ones\n"
+            "- Put the document's main subject / overarching theme as a central node that "
+            "others connect to\n"
             "- Connect related concepts with labelled relationships (edges)\n"
-            "- Each edge label is a short phrase describing the relationship (e.g. 'is part of', "
-            "'uses', 'leads to', 'type of')\n"
-            "- Assign each node a 'group' (a broad category it belongs to)\n\n"
-            "Return ONLY this JSON (no extra text):\n"
+            "- Each edge label is a short phrase (e.g. 'is part of', 'uses', 'leads to', "
+            "'type of', 'depends on')\n"
+            "- Assign each node a 'group' (the broad category/theme it belongs to)\n\n"
+            + (f"The document's most statistically important terms are: {terms_hint}. "
+               "Use these to guide which concepts matter most (rephrase into clean concept names).\n\n"
+               if terms_hint else "")
+            + "Return ONLY this JSON (no extra text):\n"
             '{"nodes":[{"id":"Concept Name","group":"Category"}],'
             '"edges":[{"from":"Concept A","to":"Concept B","label":"relationship"}]}\n\n'
             f"Document content:\n{context}"
@@ -1317,10 +1364,10 @@ def concept_map():
                 if "rate_limit" in str(e).lower(): continue
                 break
 
-    # Fallback — star graph: central doc node linked to extracted topics
-    topics = _extract_topic_words(sampled, 10)
-    nodes = [{"id": "Document", "group": "Root"}] + [{"id": t, "group": "Topic"} for t in topics]
-    edges = [{"from": "Document", "to": t, "label": "covers"} for t in topics]
+    # Fallback — star graph anchored on the document's most important TF-IDF terms
+    topics = key_terms[:12] or _extract_topic_words(sampled, 10)
+    nodes = [{"id": "Main Topic", "group": "Core"}] + [{"id": t, "group": "Key Topic"} for t in topics]
+    edges = [{"from": "Main Topic", "to": t, "label": "covers"} for t in topics]
     return jsonify({"status": "ok", "nodes": nodes, "edges": edges, "mode": "fallback"})
 
 

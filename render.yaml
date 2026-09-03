@@ -1,0 +1,17 @@
+# Render Blueprint — deploys StudyGenie as one free Docker web service.
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: studygenie
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    envVars:
+      # Paste your Groq API key in the Render dashboard (kept out of git).
+      - key: GROQ_API_KEY
+        sync: false
+      # Optional: switch the AI model if you like.
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
+      # DB_* are omitted on purpose -> the container uses its built-in MariaDB.
+      # To use an external MySQL instead, add DB_HOST / DB_USER / DB_PASS / DB_NAME here.

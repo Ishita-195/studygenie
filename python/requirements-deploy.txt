@@ -1,0 +1,16 @@
+# Lean dependency set for the free-tier deployment container.
+# The heavy/optional extras from requirements.txt are intentionally left OUT so the
+# image stays small and fits in ~512 MB RAM:
+#   - sentence-transformers / torch  -> app.py falls back to TF-IDF retrieval
+#   - pytesseract / Pillow           -> OCR for scanned PDFs disabled (needs the
+#                                        Tesseract system binary anyway)
+# All of these are imported inside try/except blocks in app.py, so dropping them
+# only disables the corresponding optional feature.
+flask>=2.0.0
+flask-cors>=3.0.0
+scikit-learn>=1.0.0
+numpy>=1.20.0
+pymupdf>=1.20.0
+groq>=0.4.0
+python-dotenv>=1.0.0
+python-docx>=1.0.0

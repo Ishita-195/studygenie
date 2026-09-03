@@ -1,0 +1,12 @@
+.git
+.gitignore
+__pycache__/
+python/__pycache__/
+**/*.pyc
+uploads/*
+!uploads/.gitkeep
+config.php
+python/.env
+*.log
+test.py
+test.json
