@@ -11,7 +11,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # ── System packages: Python, MariaDB, supervisor ─────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        python3 python3-pip \
+        python3 python3-venv \
         mariadb-server mariadb-client \
         supervisor \
     && rm -rf /var/lib/apt/lists/*
@@ -19,9 +19,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ── PHP extensions the app needs ─────────────────────────────────────────────
 RUN docker-php-ext-install mysqli && docker-php-ext-enable mysqli
 
-# ── Python dependencies (lean set — see requirements-deploy.txt) ──────────────
+# ── Python dependencies in an isolated venv ──────────────────────────────────
+# A venv keeps pip away from Debian's system-managed packages (e.g.
+# typing_extensions, which ships without pip metadata). Installing into the
+# system Python otherwise fails with "uninstall-no-record-file".
+ENV VIRTUAL_ENV=/opt/venv
+RUN python3 -m venv "$VIRTUAL_ENV"
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 COPY python/requirements-deploy.txt /tmp/requirements.txt
-RUN pip3 install --no-cache-dir --break-system-packages -r /tmp/requirements.txt
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r /tmp/requirements.txt
 
 # ── Application code ─────────────────────────────────────────────────────────
 COPY . /var/www/html/
