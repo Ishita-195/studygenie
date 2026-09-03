@@ -34,9 +34,10 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 CACHE_DIR.mkdir(exist_ok=True)
 
 # ── Config ───────────────────────────────────────────────────────────────────
-GROQ_MODEL       = os.getenv("GROQ_MODEL",       "llama-3.3-70b-versatile")
-GROQ_MODEL_FAST  = os.getenv("GROQ_MODEL_FAST",  "llama-3.1-8b-instant")   # smaller, separate quota
-                                                 # (llama3-8b-8192 was decommissioned by Groq)
+GROQ_MODEL       = os.getenv("GROQ_MODEL",       "openai/gpt-oss-120b")     # capable model for chat/summary/quiz
+GROQ_MODEL_FAST  = os.getenv("GROQ_MODEL_FAST",  "openai/gpt-oss-20b")      # smaller/faster backup
+                                                 # NOTE: this Groq key has no access to Llama models —
+                                                 # available models verified via the /groq-selftest route.
 TOP_K       = 8      # more chunks → better context for complex questions
 MIN_SCORE   = 0.03   # lower threshold → fewer "not found" on valid questions
 CHUNK_WORDS = 300

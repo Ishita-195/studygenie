@@ -13,8 +13,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # GROQ_API_KEY is supplied at runtime (Render env var) and overrides the empty
 # default here; supervisord passes the container environment on to Flask.
 ENV GROQ_API_KEY="" \
-    GROQ_MODEL="llama-3.3-70b-versatile" \
-    GROQ_MODEL_FAST="llama-3.1-8b-instant"
+    GROQ_MODEL="openai/gpt-oss-120b" \
+    GROQ_MODEL_FAST="openai/gpt-oss-20b"
 
 # ── System packages: Python, MariaDB, supervisor ─────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \

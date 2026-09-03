@@ -10,8 +10,10 @@ services:
       # Paste your Groq API key in the Render dashboard (kept out of git).
       - key: GROQ_API_KEY
         sync: false
-      # Optional: switch the AI model if you like.
+      # Models this Groq key can access (verified via /groq-selftest).
       - key: GROQ_MODEL
-        value: llama-3.3-70b-versatile
+        value: openai/gpt-oss-120b
+      - key: GROQ_MODEL_FAST
+        value: openai/gpt-oss-20b
       # DB_* are omitted on purpose -> the container uses its built-in MariaDB.
       # To use an external MySQL instead, add DB_HOST / DB_USER / DB_PASS / DB_NAME here.
