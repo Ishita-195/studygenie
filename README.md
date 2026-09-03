@@ -8,7 +8,7 @@ A document-aware learning platform that turns any PDF or Word file into AI-gener
   </a>
 </div>
 
-<p align="center"><i>Hosted free on Render — the first request may take ~30–50s to wake the instance. Just register a free account to explore.</i></p>
+<p align="center"></p>
 
 ## Project Overview
 
