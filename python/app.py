@@ -35,7 +35,8 @@ CACHE_DIR.mkdir(exist_ok=True)
 
 # ── Config ───────────────────────────────────────────────────────────────────
 GROQ_MODEL       = os.getenv("GROQ_MODEL",       "llama-3.3-70b-versatile")
-GROQ_MODEL_FAST  = os.getenv("GROQ_MODEL_FAST",  "llama3-8b-8192")   # smaller, separate quota
+GROQ_MODEL_FAST  = os.getenv("GROQ_MODEL_FAST",  "llama-3.1-8b-instant")   # smaller, separate quota
+                                                 # (llama3-8b-8192 was decommissioned by Groq)
 TOP_K       = 8      # more chunks → better context for complex questions
 MIN_SCORE   = 0.03   # lower threshold → fewer "not found" on valid questions
 CHUNK_WORDS = 300
@@ -1126,9 +1127,7 @@ def generate_quiz():
             print(f"[QUIZ] ⚠️ Parse/validate failed with {model}, trying next")
         except Exception as e:
             print(f"[QUIZ] {model} error: {e}")
-            if "rate_limit" in str(e).lower():
-                continue   # try the other model
-            break
+            continue   # any error → try the next model before giving up to fallback
 
     fb = _fallback_quiz(chunks, num_questions)
     return jsonify({"status":"ok","questions":fb,"mode":"fallback"})
@@ -1266,8 +1265,7 @@ def study_plan():
                     return jsonify(result)
             except Exception as e:
                 print(f"[STUDY-PLAN] {model} error: {e}")
-                if "rate_limit" in str(e).lower(): continue
-                break
+                continue   # any error → try the next model before giving up to fallback
 
     # Fallback — split topics across days
     topics = _extract_topic_words(sampled, days * 3)
@@ -1361,8 +1359,7 @@ def concept_map():
                     return jsonify(result)
             except Exception as e:
                 print(f"[CONCEPT-MAP] {model} error: {e}")
-                if "rate_limit" in str(e).lower(): continue
-                break
+                continue   # any error → try the next model before giving up to fallback
 
     # Fallback — star graph anchored on the document's most important TF-IDF terms
     topics = key_terms[:12] or _extract_topic_words(sampled, 10)
@@ -1421,6 +1418,28 @@ def status():
         "upload_folder": str(UPLOAD_DIR),
         "file_chunks":   {f:len(d["chunks"]) for f,d in per_file_data.items()},
     })
+
+
+@app.route("/groq-selftest", methods=["GET"])
+def groq_selftest():
+    """Make ONE real Groq call and report success or the exact error.
+    'groq_available' only means the client object was created — this proves
+    whether the API key actually works (invalid key / quota / dead model all
+    surface here as the real exception text)."""
+    if not groq_client:
+        return jsonify({"ok": False,
+                        "reason": "client_not_initialized",
+                        "detail": "GROQ_API_KEY is empty or still the placeholder."})
+    try:
+        r = groq_client.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=[{"role": "user", "content": "Reply with the single word: pong"}],
+            max_tokens=5, temperature=0)
+        return jsonify({"ok": True, "model": GROQ_MODEL,
+                        "reply": r.choices[0].message.content.strip()})
+    except Exception as e:
+        return jsonify({"ok": False, "model": GROQ_MODEL,
+                        "error_type": type(e).__name__, "error": str(e)})
 
 
 @app.route("/debug", methods=["GET"])

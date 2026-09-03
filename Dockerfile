@@ -9,6 +9,13 @@ FROM php:8.2-apache
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1
 
+# Groq defaults so the Flask process always sees valid model names. The real
+# GROQ_API_KEY is supplied at runtime (Render env var) and overrides the empty
+# default here; supervisord passes the container environment on to Flask.
+ENV GROQ_API_KEY="" \
+    GROQ_MODEL="llama-3.3-70b-versatile" \
+    GROQ_MODEL_FAST="llama-3.1-8b-instant"
+
 # ── System packages: Python, MariaDB, supervisor ─────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
         python3 python3-venv \
