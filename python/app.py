@@ -1430,16 +1430,26 @@ def groq_selftest():
         return jsonify({"ok": False,
                         "reason": "client_not_initialized",
                         "detail": "GROQ_API_KEY is empty or still the placeholder."})
+    # List the models this API key is actually allowed to use.
+    available = None
+    try:
+        available = sorted(m.id for m in groq_client.models.list().data)
+    except Exception as e:
+        available = f"models.list() failed: {type(e).__name__}: {e}"
+
+    # Try a real completion with the configured model.
     try:
         r = groq_client.chat.completions.create(
             model=GROQ_MODEL,
             messages=[{"role": "user", "content": "Reply with the single word: pong"}],
             max_tokens=5, temperature=0)
         return jsonify({"ok": True, "model": GROQ_MODEL,
-                        "reply": r.choices[0].message.content.strip()})
+                        "reply": r.choices[0].message.content.strip(),
+                        "available_models": available})
     except Exception as e:
         return jsonify({"ok": False, "model": GROQ_MODEL,
-                        "error_type": type(e).__name__, "error": str(e)})
+                        "error_type": type(e).__name__, "error": str(e),
+                        "available_models": available})
 
 
 @app.route("/debug", methods=["GET"])
